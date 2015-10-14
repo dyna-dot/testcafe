@@ -4,6 +4,8 @@ import flatten from 'flatten';
 import Bootstrapper from './bootstrapper';
 import Task from './task';
 import LocalBrowserConnection from '../browser-connection/local';
+import { MESSAGE, getText } from '../messages';
+
 
 export default class Runner {
     constructor (proxy, browserConnectionGateway) {
@@ -33,6 +35,13 @@ export default class Runner {
     // Run task
     _runTask (Reporter, browserConnections, tests) {
         return new Promise((resolve, reject) => {
+            if (browserConnections.some(connection => connection.disconnected)) {
+                browserConnections.forEach(bc => bc instanceof LocalBrowserConnection && bc.close());
+                reject(getText(MESSAGE.cantEstablishBrowserConnection));
+
+                return;
+            }
+
             var task     = new Task(tests, browserConnections, this.proxy, this.opts);
             var reporter = new Reporter(task, this.opts.reportOutStream, this.opts.errorDecorator);
 

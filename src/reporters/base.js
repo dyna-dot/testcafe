@@ -9,10 +9,10 @@ import plainTextDecorator from './errors/decorators/plain-text';
 import ttyDecorator from './errors/decorators/tty';
 
 export default class BaseReporter {
-    constructor (task, outStream = process.stdout, errorDecorator = null) {
+    constructor (task, outStream, errorDecorator) {
         this.DEFAULT_VIEWPORT_WIDTH = 78;
 
-        this.outStream = outStream;
+        this.outStream = outStream || process.stdout;
 
         var isTTY = !!this.outStream.isTTY;
 

@@ -1,9 +1,9 @@
-var path              = require('path');
-var expect            = require('chai').expect;
-var request           = require('request');
-var TestCafe          = require('../../lib/');
-var SpecReporter      = require('../../lib/reporters/spec');
-
+var path         = require('path');
+var expect       = require('chai').expect;
+var request      = require('request');
+var TestCafe     = require('../../lib/');
+var SpecReporter = require('../../lib/reporters/spec');
+var COMMAND      = require('../../lib/browser-connection/command');
 
 describe('Runner', function () {
     var testCafe   = null;
@@ -117,8 +117,8 @@ describe('Runner', function () {
                                             'or due to network issues.');
                 });
 
-            connection1.HEARTBEAT_TIMEOUT = 0;
-            connection2.HEARTBEAT_TIMEOUT = 0;
+            connection1.HEARTBEAT_TIMEOUT = 200;
+            connection2.HEARTBEAT_TIMEOUT = 200;
 
             var options = {
                 url:            connection1.url,
@@ -138,8 +138,36 @@ describe('Runner', function () {
                 .catch(done);
         });
 
+        it('Should raise error if browser disconnected before bootstrapping', function (done) {
+            var brokenConnection = testCafe.createBrowserConnection();
+
+            brokenConnection.establish('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 ' +
+                                       '(KHTML, like Gecko) Chrome/41.0.2227.1 Safari/537.36');
+
+            brokenConnection.on('error', function () {
+                runner
+                    .run()
+                    .then(function () {
+                        throw new Error('Promise rejection expected');
+                    })
+                    .catch(function (err) {
+                        expect(err.message).eql('Unable to establish one or more of the specified browser connections. ' +
+                                                'This can be caused by network issues or remote device failure.');
+                    })
+                    .then(done)
+                    .catch(done);
+            });
+
+            runner.
+                browsers(brokenConnection)
+                .reporter('list')
+                .src('test/server/data/test-suite/top.test.js');
+
+            brokenConnection.emit('error', 'It happened');
+        });
+
         it('Should raise error if the browser connections are not ready', function (done) {
-            var brokenConnection  = testCafe.createBrowserConnection();
+            var brokenConnection = testCafe.createBrowserConnection();
 
             runner.bootstrapper.BROWSER_CONNECTION_READY_TIMEOUT = 0;
 
@@ -248,6 +276,53 @@ describe('Runner', function () {
                 })
                 .catch(done);
         });
+
+        it('Should not create a new local browser connection if sources are empty', function (done) {
+            var startConnectionID = testCafe.createBrowserConnection().id;
+
+            var run = runner
+                .browsers({ path: '/non/exist' })
+                .reporter('list')
+                .src([])
+                .run()
+                .then(function () {
+                    throw new Error('Promise rejection expected');
+                })
+                .catch(function () {
+                    var endConnectionID = testCafe.createBrowserConnection().id;
+
+                    expect(endConnectionID).eql(startConnectionID + 1);
+                });
+
+            run
+                .then(function () {
+                    done();
+                })
+                .catch(done);
+        });
+
+        it('Should raise exception if all tests are rejected by filter', function (done) {
+            var run = runner
+                .browsers(connection)
+                .reporter('list')
+                .src('test/server/data/test-suite/top.test.js')
+                .filter(function () {
+                    return false;
+                })
+                .run()
+                .then(function () {
+                    throw new Error('Promise rejection expected');
+                })
+                .catch(function (err) {
+                    expect(err.message).eql('No tests were found. Either the test files contain no tests or the filter function is too restrictive.');
+                });
+
+            run
+                .then(function () {
+                    done();
+                })
+                .catch(done);
+        });
     });
 
     describe('.filter()', function () {
@@ -323,6 +398,41 @@ describe('Runner', function () {
             var expectedTestNames = ['Level2 fixture test'];
 
             testFilter(filter, expectedTestNames, done);
+        });
+    });
+
+    describe('.run()', function () {
+        it('Should raise exception if connection disconnected during tests', function (done) {
+            var brokenConnection = testCafe.createBrowserConnection();
+
+            brokenConnection.establish('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 ' +
+                                       '(KHTML, like Gecko) Chrome/41.0.2227.1 Safari/537.36');
+
+            var run = runner
+                .browsers(brokenConnection)
+                .reporter('list')
+                .src('test/server/data/test-suite/top.test.js')
+                .run()
+                .then(function () {
+                    throw new Error('Promise rejection expected');
+                })
+                .catch(function (err) {
+                    expect(err.message).eql('I have failed :(');
+                });
+
+            setTimeout(function () {
+                var status = brokenConnection.getStatus();
+
+                expect(status.cmd).eql(COMMAND.run);
+
+                brokenConnection.emit('error', 'I have failed :(');
+            }, 200);
+
+            run
+                .then(function () {
+                    done();
+                })
+                .catch(done);
         });
     });
 });
