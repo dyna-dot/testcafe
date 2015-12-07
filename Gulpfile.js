@@ -49,41 +49,6 @@ var CLIENT_TESTS_SETTINGS = {
 
 var CLIENT_TESTS_BROWSERS = [
     {
-        platform:    'Windows 10',
-        browserName: 'microsoftedge'
-    },
-    {
-        platform:    'Windows 10',
-        browserName: 'chrome'
-    },
-    {
-        browserName: 'chrome',
-        platform:    'OS X 10.11'
-    },
-    {
-        platform:    'Windows 10',
-        browserName: 'firefox'
-    },
-    {
-        browserName: 'firefox',
-        platform:    'OS X 10.11'
-    },
-    {
-        platform:    'Windows 10',
-        browserName: 'internet explorer',
-        version:     '11.0'
-    },
-    {
-        platform:    'Windows 8',
-        browserName: 'internet explorer',
-        version:     '10.0'
-    },
-    {
-        platform:    'Windows 7',
-        browserName: 'internet explorer',
-        version:     '9.0'
-    },
-    {
         platform:    'Linux',
         browserName: 'android',
         version:     '5.1',
