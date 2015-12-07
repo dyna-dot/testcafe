@@ -208,17 +208,22 @@ $(document).ready(function () {
         //    }, 500);
         //});
 
-    for (var i = 0;i<50;i++){
-        asyncTest('ololo' + i, function () {
-            runAsyncTest(
-                function () {
-                    actionsAPI.wait(LONG_DELAY);
-                },
-                function () {
-                    ok(pageLongTimeoutExpired, 'page timeout over over during wait action');
-                },
-                2000
-            );
-        });
-    }
+    asyncTest('ololo', function (){
+        var n = 100;
+        var s1='', s2 = Array(n+1).join('12');
+        for (var i = 0; i< n; i++){
+            setTimeout(function () {
+                s1+='1';
+            }, 50*(2*i));
+            setTimeout(function () {
+                s1+='2';
+            }, 50*(2*i + 1));
+        }
+        setTimeout(function (){
+            equal(s1,s2);
+            start();
+        }, 50 * 2 * (n+1));
+
+
+    });
 });
