@@ -96,8 +96,6 @@ export default class BrowserConnection extends EventEmitter {
     renderIdlePage () {
         this.idle = true;
 
-        this.emit('idle');
-
         return Mustache.render(IDLE_PAGE_TEMPLATE, {
             userAgent:    this.userAgent,
             statusUrl:    this.statusUrl,
@@ -112,6 +110,9 @@ export default class BrowserConnection extends EventEmitter {
             this.idle = false;
             return { cmd: COMMAND.run, url: testRunUrl };
         }
+
+        if (this.idle)
+            this.emit('idle');
 
         return { cmd: COMMAND.idle, url: this.idleUrl };
     }

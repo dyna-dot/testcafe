@@ -8,6 +8,9 @@ function escapeNewLines (str) {
 }
 
 function getStepCode (str) {
+    if (!str)
+        return '';
+
     var lines = str.split(/\r?\n/g);
     var last  = lines.pop();
 

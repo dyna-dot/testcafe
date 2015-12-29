@@ -159,7 +159,8 @@ gulp.task('client-scripts-bundle', ['clean'], function () {
             transform: function (filename, code) {
                 var transformed = babel.transform(code, {
                     sourceMap: false,
-                    filename:  filename
+                    filename:  filename,
+                    blacklist: ['useStrict']
                 });
 
                 return { code: transformed.code };
@@ -208,7 +209,7 @@ gulp.task('images', ['clean'], function () {
 });
 
 
-gulp.task('build', ['lint', 'server-scripts', 'client-scripts', 'styles', 'images', 'templates']);
+gulp.task('build', ['server-scripts', 'client-scripts', 'styles', 'images', 'templates']);
 
 // Test
 gulp.task('test-server', ['build'], function () {

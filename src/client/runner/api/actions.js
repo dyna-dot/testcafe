@@ -76,7 +76,7 @@ function failWithError (type, additionalParams) {
 }
 
 function ensureElementsExist (item, actionName, callback) {
-    var success = false;
+    var elements = null;
 
     var ensureExists = function () {
         var array = null;
@@ -87,37 +87,42 @@ function ensureElementsExist (item, actionName, callback) {
             array = ensureArray(res);
 
             if (res && !(isJQueryObj(res) && !res.length) && array.length) {
-                callback(array);
-                return true;
+                return array;
             }
         }
         else if (typeof item === 'string') {
             array = parseActionArgument(item, actionName);
 
             if (array && array.length) {
-                callback(array);
-                return true;
+                return array;
             }
         }
 
-        return false;
+        return null;
     };
 
-    if (ensureExists())
+    elements = ensureExists();
+    if (elements){
+        callback(elements);
         return;
+    }
 
+    onTargetWaitingStarted();
+
+    var timeout  = 0;
     var interval = window.setInterval(function () {
-        if (ensureExists()) {
-            success = true;
+        var elements = ensureExists();
+        if (elements) {
+            window.clearTimeout(timeout);
             window.clearInterval(interval);
+            onTargetWaitingFinished();
+            callback(elements);
         }
     }, ELEMENT_AVAILABILITY_WAITING_DELAY);
 
-    window.setTimeout(function () {
-        if (!success) {
-            window.clearInterval(interval);
-            failWithError(ERROR_TYPE.emptyFirstArgument, { action: actionName });
-        }
+    timeout = window.setTimeout(function () {
+        window.clearInterval(interval);
+        failWithError(ERROR_TYPE.emptyFirstArgument, { action: actionName });
     }, ELEMENT_AVAILABILITY_WAITING_TIMEOUT);
 }
 
@@ -194,7 +199,6 @@ function actionArgumentsIterator (actionName) {
 
     return {
         run: function (items, actionRunner, callback) {
-            onTargetWaitingStarted();
             runAction = actionRunner;
             extractArgs(items, callback);
         }
@@ -261,11 +265,6 @@ export function click (what, options) {
                     });
                 }
 
-                if (!actionStarted) {
-                    actionStarted = true;
-                    onTargetWaitingFinished();
-                }
-
                 if (iframe)
                     iframe.contentWindow[automation.AUTOMATION_RUNNERS].click.playback(element, options ||
                                                                                                 {}, callback, onerror);
@@ -284,11 +283,6 @@ export function rclick (what, options) {
         actionArgumentsIterator('rclick').run,
         function (element, callback, iframe) {
             ensureElementVisibility(element, 'rclick', function () {
-                if (!actionStarted) {
-                    actionStarted = true;
-                    onTargetWaitingFinished();
-                }
-
                 if (iframe)
                     iframe.contentWindow[automation.AUTOMATION_RUNNERS].rclick.playback(element, options ||
                                                                                                  {}, callback);
@@ -307,11 +301,6 @@ export function dblclick (what, options) {
         actionArgumentsIterator('dblclick').run,
         function (element, callback, iframe) {
             ensureElementVisibility(element, 'dblclick', function () {
-                if (!actionStarted) {
-                    actionStarted = true;
-                    onTargetWaitingFinished();
-                }
-
                 if (iframe)
                     iframe.contentWindow[automation.AUTOMATION_RUNNERS].dblclick.playback(element, options ||
                                                                                                    {}, callback);
@@ -354,11 +343,6 @@ export function drag (what) {
         actionArgumentsIterator('drag').run,
         function (element, callback, iframe) {
             ensureElementVisibility(element, 'drag', function () {
-                if (!actionStarted) {
-                    actionStarted = true;
-                    onTargetWaitingFinished();
-                }
-
                 if (iframe)
                     iframe.contentWindow[automation.AUTOMATION_RUNNERS].drag.playback(element, to, options ||
                                                                                                    {}, callback);
@@ -449,11 +433,6 @@ export function select () {
                 };
 
             ensureElementVisibility(element, 'select', function () {
-                if (!actionStarted) {
-                    actionStarted = true;
-                    onTargetWaitingFinished();
-                }
-
                 if (iframe)
                     iframe.contentWindow[automation.AUTOMATION_RUNNERS].select.playback(element, options, callback);
                 else
@@ -476,11 +455,6 @@ export function type (what, text, options) {
         actionArgumentsIterator('type').run,
         function (element, callback, iframe) {
             ensureElementVisibility(element, 'type', function () {
-                if (!actionStarted) {
-                    actionStarted = true;
-                    onTargetWaitingFinished();
-                }
-
                 if (iframe)
                     iframe.contentWindow[automation.AUTOMATION_RUNNERS].type.playback(element, text, options ||
                                                                                                      {}, callback);
@@ -499,11 +473,6 @@ export function hover (what, options) {
         actionArgumentsIterator('hover').run,
         function (element, callback, iframe) {
             ensureElementVisibility(element, 'hover', function () {
-                if (!actionStarted) {
-                    actionStarted = true;
-                    onTargetWaitingFinished();
-                }
-
                 if (iframe)
                     iframe.contentWindow[automation.AUTOMATION_RUNNERS].hover.playback(element, callback);
                 else
@@ -589,7 +558,7 @@ export function waitFor (event, timeout) {
                 stopConditionCheck();
 
             timeoutExceeded = true;
-            failWithError(ERROR_TYPE.waitForActionTimeoutExceeded);
+            failWithErrror(ERROR_TYPE.waitForActionTimeoutExceeded);
         }, timeout);
 
         function onConditionReached () {
@@ -665,11 +634,6 @@ export function upload (what, path) {
                 failWithError(ERROR_TYPE.uploadElementIsNotFileInput);
 
             else {
-                if (!actionStarted) {
-                    actionStarted = true;
-                    onTargetWaitingFinished();
-                }
-
                 hammerhead.doUpload(element, path)
                     .then((errs) => {
                         if (errs.length) {

@@ -5,7 +5,6 @@ var testCafeCore  = window.getTestCafeModule('testCafeCore');
 var SETTINGS      = testCafeCore.get('./settings').get();
 var ERROR_TYPE    = testCafeCore.ERROR_TYPE;
 var styleUtils    = testCafeCore.get('./utils/style');
-var positionUtils = testCafeCore.get('./utils/position');
 
 var testCafeRunner = window.getTestCafeModule('testCafeRunner');
 var actionsAPI     = testCafeRunner.get('./api/actions');
@@ -1032,6 +1031,36 @@ $(document).ready(function () {
             },
             function () {
                 ok($("area").data('clicked'));
+            },
+            correctTestWaitingTime(TEST_COMPLETE_WAITING_TIMEOUT)
+        );
+    });
+
+    asyncTest('testcafe functions should not be in strict mode', function () {
+        var exceptionRaised = false;
+
+        runAsyncTest(
+            function () {
+                $el.click(function() {
+                    try {
+                        /*eslint-disable no-caller*/
+
+                        var caller = arguments.callee.caller;
+
+                        /*eslint-enable no-caller*/
+
+                        while (caller)
+                            caller = caller.arguments.callee.caller;
+                    }
+                    catch (e) {
+                        exceptionRaised = true;
+                    }
+                });
+
+                actionsAPI.click($el);
+            },
+            function () {
+                ok(!exceptionRaised, 'should not throw an exception');
             },
             correctTestWaitingTime(TEST_COMPLETE_WAITING_TIMEOUT)
         );
