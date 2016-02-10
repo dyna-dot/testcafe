@@ -8,7 +8,7 @@ var TEST_SERVER_PORT = 3002;
 var BROWSERS_COUNT   = config.browsers.length;
 
 
-describe('quarantine mode regression test', function () {
+describe.only('Quarantine mode regression tests', function () {
     var expectedBrowsersCount = BROWSERS_COUNT;
     var requestNumber         = 0;
     var responses             = [];
@@ -41,7 +41,7 @@ describe('quarantine mode regression test', function () {
     function startServer () {
         testServer = http.createServer(requestHandler);
 
-        testServer.setTimeout(500);
+        testServer.setTimeout(2000);
         testServer.listen(TEST_SERVER_PORT);
         return promisifyEvent(testServer, 'listening');
     }
@@ -88,6 +88,10 @@ describe('quarantine mode regression test', function () {
         return runTests('quarantine-mode.test.js', 'Wait 200ms', { shouldFail: true, quarantineMode: true })
             .catch(function (err) {
                 var expectedError = 'Uncaught JavaScript error Uncaught Error: Failed by request! on page';
+
+                /* eslint-disable no-console */
+                console.log(testReport);
+                /* eslint-enable no-console */
 
                 expect(requestNumber).to.be.at.least(3);
                 expect(testReport.unstable).to.be.true;
