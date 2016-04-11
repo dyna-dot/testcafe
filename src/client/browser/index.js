@@ -11,7 +11,9 @@ const HEARTBEAT_INTERVAL = 30 * 1000;
 // the original URL. That's why we need the XMLHttpRequest argument to send the request via native methods.
 function sendXHR (url, XMLHttpRequest) {
     return new Promise((resolve, reject) => {
-        var xhr = new XMLHttpRequest();
+        var hammerhead = window['%hammerhead%'];
+
+        var xhr = hammerhead ? hammerhead.get('./sandbox/xhr').createNativeXHR() : new XMLHttpRequest();
 
         xhr.open('GET', url, true);
 
