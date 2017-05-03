@@ -7,7 +7,7 @@ import { GeneralError } from '../../errors/runtime';
 import MESSAGE from '../../errors/runtime/message';
 
 
-const BROWSER_PROVIDER_RE = /^([^:]+)(?::(.*))?$/;
+const BROWSER_PROVIDER_RE = /^([^:\s]+)(?::?\s*(.*))?$/;
 
 export default {
     providersCache: {},
@@ -38,7 +38,7 @@ export default {
         else {
             providerName = 'locally-installed';
             provider     = await this.getProvider(providerName);
-            browserName  = providerRegExpMatch[1] || '';
+            browserName  = alias || '';
         }
 
         return { provider, providerName, browserName };
