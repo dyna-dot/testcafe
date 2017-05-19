@@ -6,6 +6,7 @@ import browserTools from 'testcafe-browser-tools';
 import remoteChrome from 'chrome-remote-interface';
 import emulatedDevices from 'chrome-emulated-devices-list';
 import psNode from 'ps-node';
+import OS from 'os-family';
 import { Config, ConfigSchema } from 'config-line';
 
 
@@ -13,27 +14,18 @@ const psLookup    = pify(psNode.lookup, Promise);
 const psKill      = pify(psNode.kill, Promise);
 const fsWriteFile = pify(fs.writeFile, Promise);
 
-const PORT_RE = /:(\d)+$/;
 
 const BROWSER_CLOSING_TIMEOUT    = 5;
 const CONFIG_CACHE_CLEAR_TIMEOUT = 2 * 60 * 1000;
 
 const CONFIG_SPEC = {
-    remote:    false,
-    noCdb:     false,
-    args:      '',
-    incognito: false,
-    headless:  false,
-    host:      'localhost',
-    port:      9222,
-    path:      '',
+    headless: false,
 
-    userDataDir:    '',
-    noTempUserData: false,
-
-    emulation: false,
+    _deviceDefaultKey: 'name',
 
     device: {
+        name: '',
+
         screen: {
             width:   0,
             height:  0,
@@ -42,13 +34,18 @@ const CONFIG_SPEC = {
 
         mobile:      false,
         orientation: 'default',
-        name:        '',
 
         userAgent:          void 0,
         _userAgentTypeHint: 'string',
 
         touch:          void 0,
         _touchTypeHint: 'boolean'
+    },
+
+    cdpArgs: {
+        host: 'localhost',
+        port: 9222,
+        path: ''
     }
 };
 
@@ -68,26 +65,9 @@ function findDevice (deviceName) {
 }
 
 async function getNewConfig (configString) {
-    if (configString.indexOf('--') === 0)
-        configString = 'args=' + configString;
-
     var config = new Config(CONFIG_SCHEMA, configString);
 
-    config.override('remote', !config.isDefault('host'));
-
-    if (config.remote) {
-        config.noTempUserData = true;
-
-        var portMatch = config.host.match(PORT_RE);
-
-        if (portMatch) {
-            config.override('port', Number(portMatch[1]));
-            config.host = config.host.replace(PORT_RE, '');
-        }
-    }
-    else
-        config.override('noTempUserData', !!config.userDataDir);
-
+    config.userArgs  = config.unparsed;
     config.emulation = DEVICE_PROPERTIES.some(key => !config.isDefault(key));
 
     if (config.device.name) {
@@ -115,24 +95,18 @@ async function getConfig (configString) {
     return await configCache[configString];
 }
 
-function buildChromeArgs (config, platformArgs, tempUserDataDir) {
-    var tempUserDataDirName = tempUserDataDir && tempUserDataDir.name;
-    var userDataDir         = config.userDataDir || tempUserDataDirName;
-
-    return []
+function buildChromeArgs (config, platformArgs, userDataDir) {
+    return [`--remote-debugging-port=${config.cdpArgs.port}`, `--user-data-dir=${userDataDir.name}`]
         .concat(
-            !config.noCdb ? [`--remote-debugging-port=${config.port}`] : [],
-            userDataDir ? [`--user-data-dir=${userDataDir}`] : [],
             config.headless ? ['--headless'] : [],
-            config.incognito ? ['--incognito'] : [],
-            config.args ? [config.args] : [],
+            config.userArgs ? [config.userArgs] : [],
             platformArgs ? [platformArgs] : []
         )
         .join(' ');
 }
 
 async function killChrome (config) {
-    var chromeOptions = { arguments: `--remote-debugging-port=${config.port}` };
+    var chromeOptions = { arguments: `--remote-debugging-port=${config.cdpArgs.port}` };
     var chromeProcess = await psLookup(chromeOptions);
 
     if (!chromeProcess.length)
@@ -154,7 +128,7 @@ async function stopLocalChrome (config) {
 }
 
 async function getActiveTab (config, browserId) {
-    var tabs = await remoteChrome.listTabs(config);
+    var tabs = await remoteChrome.listTabs({ host: config.cdpArgs.host, port: config.cdpArgs.port });
     var tab  = tabs.filter(t => t.type === 'page' && t.url.indexOf(browserId) > -1)[0];
 
     return tab;
@@ -200,14 +174,14 @@ async function getWindowId (client, tab) {
     }
 }
 
-async function getCdbClientInfo (config, browserId) {
+async function getCdpClientInfo (config, browserId) {
     try {
-        var tab = config.remote ? await remoteChrome.spawnTab(config) : await getActiveTab(config, browserId);
+        var tab = await getActiveTab(config, browserId);
 
         if (!tab)
             return {};
 
-        var client   = await remoteChrome({ target: tab, host: config.host, port: config.port });
+        var client   = await remoteChrome({ target: tab, host: config.cdpArgs.host, port: config.cdpArgs.port });
         var windowId = await getWindowId(client, tab);
 
         return { tab, client, windowId };
@@ -215,13 +189,6 @@ async function getCdbClientInfo (config, browserId) {
     catch (e) {
         return {};
     }
-}
-
-async function isCdbEnabled (config) {
-    var chromeOptions = { arguments: `--remote-debugging-port=${config.port}` };
-    var chromeProcess = await psLookup(chromeOptions);
-
-    return !!chromeProcess.length;
 }
 
 function createTempUserDataDir () {
@@ -238,8 +205,8 @@ export default {
     async _startLocalChrome (browserId, config, pageUrl, tempUserDataDir) {
         var chromeInfo = null;
 
-        if (config.path)
-            chromeInfo = await browserTools.getBrowserInfo(config.path);
+        if (config.cdpArgs.path)
+            chromeInfo = await browserTools.getBrowserInfo(config.cdpArgs.path);
         else
             chromeInfo = await browserTools.getBrowserInfo(this.providerName);
 
@@ -254,44 +221,35 @@ export default {
 
     async openBrowser (browserId, pageUrl, configString) {
         var config          = await getConfig(configString);
-        var tempUserDataDir = !config.remote && !config.noTempUserData && createTempUserDataDir() || null;
+        var tempUserDataDir = createTempUserDataDir();
 
-        if (!config.remote)
-            await this._startLocalChrome(browserId, config, pageUrl, tempUserDataDir);
+        await this._startLocalChrome(browserId, config, pageUrl, tempUserDataDir);
 
-        var cdbEnabled    = config.remote || !config.noCdb && await isCdbEnabled(config);
-        var cdbClientInfo = cdbEnabled && await getCdbClientInfo(config, browserId) || {};
+        var cdpClientInfo = await getCdpClientInfo(config, browserId);
 
-        if (cdbClientInfo.client) {
-            await cdbClientInfo.client.Page.enable();
-            await cdbClientInfo.client.Network.enable();
-
+        if (cdpClientInfo.client) {
+            await cdpClientInfo.client.Page.enable();
+            await cdpClientInfo.client.Network.enable();
 
             if (config.emulation)
-                await setEmulation(cdbClientInfo.client, config.device);
-
-            if (config.remote)
-                await cdbClientInfo.client.Page.navigate({ url: pageUrl });
+                await setEmulation(cdpClientInfo.client, config.device);
         }
 
-        var hasLocalWindow = !config.remote || !!await browserTools.findWindow(browserId);
+        Object.assign(cdpClientInfo, { config, tempUserDataDir });
 
-        Object.assign(cdbClientInfo, { config, tempUserDataDir, hasLocalWindow });
-
-        this.openedBrowsers[browserId] = cdbClientInfo;
+        this.openedBrowsers[browserId] = cdpClientInfo;
     },
 
     async closeBrowser (browserId) {
         var { tab, config } = this.openedBrowsers[browserId];
 
-        if (tab && (config.remote || config.headless)) {
-            await remoteChrome.closeTab({ id: tab.id, host: config.host, port: config.port });
-
-            if (!config.remote)
-                await stopLocalChrome(config);
-        }
+        if (tab && config.headless)
+            await remoteChrome.closeTab({ id: tab.id, host: config.cdpArgs.host, port: config.cdpArgs.port });
         else
             await browserTools.close(browserId);
+
+        if (OS.mac || config.headless)
+            await stopLocalChrome(config);
 
         delete this.openedBrowsers[browserId];
     },
@@ -300,9 +258,7 @@ export default {
         var config = this.openedBrowsers[browserId] && this.openedBrowsers[browserId].config ||
                      await getConfig(configString);
 
-        var hasLocalWindow = this.openedBrowsers[browserId] && this.openedBrowsers[browserId].hasLocalWindow;
-
-        return !config.remote && !config.headless || hasLocalWindow;
+        return !config.headless;
     },
 
     async takeScreenshot (browserId, path) {
