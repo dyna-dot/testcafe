@@ -7,7 +7,7 @@ import remoteChrome from 'chrome-remote-interface';
 import emulatedDevices from 'chrome-emulated-devices-list';
 import psNode from 'ps-node';
 import OS from 'os-family';
-import { Config, ConfigSchema } from 'config-line';
+import { getFreePort } from 'endpoint-utils';
 
 
 const psLookup    = pify(psNode.lookup, Promise);
@@ -18,41 +18,87 @@ const fsWriteFile = pify(fs.writeFile, Promise);
 const BROWSER_CLOSING_TIMEOUT    = 5;
 const CONFIG_CACHE_CLEAR_TIMEOUT = 2 * 60 * 1000;
 
-const CONFIG_SPEC = {
-    headless: false,
+const CONFIG_TERMINATOR_RE = /(\s+|^)-/;
 
-    _deviceDefaultKey: 'name',
-
-    device: {
-        name: '',
-
-        screen: {
-            width:   0,
-            height:  0,
-            density: 0,
-        },
-
-        mobile:      false,
-        orientation: 'default',
-
-        userAgent:          void 0,
-        _userAgentTypeHint: 'string',
-
-        touch:          void 0,
-        _touchTypeHint: 'boolean'
-    },
-
-    cdpArgs: {
-        host: 'localhost',
-        port: 9222,
-        path: ''
-    }
-};
-
-const CONFIG_SCHEMA     = new ConfigSchema(CONFIG_SPEC);
-const DEVICE_PROPERTIES = Object.keys(CONFIG_SCHEMA).filter(key => key.indexOf('device') === 0);
 
 var configCache = {};
+
+function hasMatch (array, re) {
+    return array.some(el => el.match(re));
+}
+
+function findMatch (array, re) {
+    return array
+        .map(option => option.match(re))
+        .filter(match => !!match)
+        .map(match => match[1])[0];
+}
+
+function splitEscaped (str, splitterChar) {
+    var result = [''];
+
+    for (var i = 0; i < str.length; i++) {
+        if (str[i] === splitterChar) {
+            result.push('');
+            continue;
+        }
+
+        if (str[i] === '\\' && (str[i + 1] === '\\' || str [i + 1] === splitterChar))
+            i++;
+
+        result[result.length - 1] += str[i];
+    }
+
+    return result;
+}
+
+function splitArgs (str) {
+    var configTerminatorMatch = str.match(CONFIG_TERMINATOR_RE);
+
+    if (!configTerminatorMatch)
+        return { configString: str, userArgs: '' };
+
+    return {
+        configString: str.substr(0, configTerminatorMatch.index),
+        userArgs:     str.substr(configTerminatorMatch.index + configTerminatorMatch[1].length)
+    };
+}
+
+function splitModes (str) {
+    var modes = splitEscaped(str, ':');
+
+    var result = {
+        headless:  hasMatch(modes, /^headless$/),
+        emulation: hasMatch(modes, /^emulation$/),
+        path:      findMatch(modes, /^path=(.*)/) || ''
+    };
+
+    var countOfModes = Object.keys(result).reduce((count, key) => result[key] ? count + 1 : count, 0);
+
+    result.options = countOfModes > Object.keys(result).length ? modes [modes.length - 1] : '';
+
+    return result;
+}
+
+function splitOptions (str) {
+    var options    = splitEscaped(str, ';');
+    var deviceName = findMatch(options, /^deviceName=(.*)/);
+    var deviceData = deviceName ? findDevice(deviceName) : {};
+
+    var mobile      = hasMatch(options, /^mobile$/) || deviceData.capabilities.indexOf('mobile') >= 0;
+    var orientation = findMatch(options, /^orientation=(.*)/) || (mobile ? 'vertical' : 'horizontal');
+
+    return {
+        mobile:      mobile,
+        orientation: orientation,
+        touch:       hasMatch(options, /^touch$/) || deviceData.capabilities.indexOf('touch') >= 0,
+        width:       findMatch(options, /^width=(.*)/) || deviceData.screen[orientation].width,
+        height:      findMatch(options, /^height=(.*)/) || deviceData.screen[orientation].height,
+        density:     findMatch(options, /^density=(.*)/) || deviceData.screen['device-pixel-ratio'],
+        userAgent:   findMatch(options, /^userAgent=(.*)/) || deviceData['user-agent'],
+        cdpPort:     findMatch(options, /^cdpPort=(.*)/) || ''
+    };
+}
 
 function simplifyDeviceName (deviceName) {
     return deviceName.replace(/\s/g, '').toLowerCase();
@@ -65,24 +111,11 @@ function findDevice (deviceName) {
 }
 
 async function getNewConfig (configString) {
-    var config = new Config(CONFIG_SCHEMA, configString);
+    var { userArgs, configString } = splitArgs();
+    var { modes, options } = splitModes(configString);
+    var config = splitOptions(options);
 
-    config.userArgs  = config.unparsed;
-    config.emulation = DEVICE_PROPERTIES.some(key => !config.isDefault(key));
-
-    if (config.device.name) {
-        var dbDevice = findDevice(config.device.name);
-
-        config.override('device.mobile', dbDevice.capabilities.indexOf('mobile') >= 0);
-        config.override('device.touch', dbDevice.capabilities.indexOf('touch') >= 0);
-        config.override('device.orientation', config.device.mobile ? 'vertical' : 'horizontal');
-        config.override('device.screen.width', dbDevice.screen[config.device.orientation].width);
-        config.override('device.screen.height', dbDevice.screen[config.device.orientation].height);
-        config.override('device.screen.density', dbDevice.screen['device-pixel-ratio']);
-        config.override('device.userAgent', dbDevice['user-agent']);
-    }
-
-    return config;
+    return Object.assign({ userArgs }, modes, config);
 }
 
 async function getConfig (configString) {
@@ -95,8 +128,8 @@ async function getConfig (configString) {
     return await configCache[configString];
 }
 
-function buildChromeArgs (config, platformArgs, userDataDir) {
-    return [`--remote-debugging-port=${config.cdpArgs.port}`, `--user-data-dir=${userDataDir.name}`]
+function buildChromeArgs (config, cdpPort, platformArgs, userDataDir) {
+    return [`--remote-debugging-port=${cdpPort}`, `--user-data-dir=${userDataDir.name}`]
         .concat(
             config.headless ? ['--headless'] : [],
             config.userArgs ? [config.userArgs] : [],
@@ -105,8 +138,8 @@ function buildChromeArgs (config, platformArgs, userDataDir) {
         .join(' ');
 }
 
-async function killChrome (config) {
-    var chromeOptions = { arguments: `--remote-debugging-port=${config.cdpArgs.port}` };
+async function killChrome (config, cdpPort) {
+    var chromeOptions = { arguments: `--remote-debugging-port=${cdpPort}` };
     var chromeProcess = await psLookup(chromeOptions);
 
     if (!chromeProcess.length)
@@ -127,21 +160,21 @@ async function stopLocalChrome (config) {
         await killChrome(config);
 }
 
-async function getActiveTab (config, browserId) {
-    var tabs = await remoteChrome.listTabs({ host: config.cdpArgs.host, port: config.cdpArgs.port });
+async function getActiveTab (cdpPort, browserId) {
+    var tabs = await remoteChrome.listTabs({ port: cdpPort });
     var tab  = tabs.filter(t => t.type === 'page' && t.url.indexOf(browserId) > -1)[0];
 
     return tab;
 }
 
 async function setEmulationBounds (client, device, overrideWidth, overrideHeight) {
-    var width  = overrideWidth !== void 0 ? overrideWidth : device.screen.width;
-    var height = overrideHeight !== void 0 ? overrideHeight : device.screen.height;
+    var width  = overrideWidth !== void 0 ? overrideWidth : device.width;
+    var height = overrideHeight !== void 0 ? overrideHeight : device.height;
 
     await client.Emulation.setDeviceMetricsOverride({
         width:             width,
         height:            height,
-        deviceScaleFactor: device.screen.density,
+        deviceScaleFactor: device.density,
         mobile:            device.mobile,
         fitWindow:         true
     });
@@ -174,14 +207,14 @@ async function getWindowId (client, tab) {
     }
 }
 
-async function getCdpClientInfo (config, browserId) {
+async function getCdpClientInfo (cdpPort, browserId) {
     try {
-        var tab = await getActiveTab(config, browserId);
+        var tab = await getActiveTab(cdpPort, browserId);
 
         if (!tab)
             return {};
 
-        var client   = await remoteChrome({ target: tab, host: config.cdpArgs.host, port: config.cdpArgs.port });
+        var client   = await remoteChrome({ target: tab, port: cdpPort });
         var windowId = await getWindowId(client, tab);
 
         return { tab, client, windowId };
@@ -205,8 +238,8 @@ export default {
     async _startLocalChrome (browserId, config, pageUrl, tempUserDataDir) {
         var chromeInfo = null;
 
-        if (config.cdpArgs.path)
-            chromeInfo = await browserTools.getBrowserInfo(config.cdpArgs.path);
+        if (config.path)
+            chromeInfo = await browserTools.getBrowserInfo(config.path);
         else
             chromeInfo = await browserTools.getBrowserInfo(this.providerName);
 
@@ -222,29 +255,30 @@ export default {
     async openBrowser (browserId, pageUrl, configString) {
         var config          = await getConfig(configString);
         var tempUserDataDir = createTempUserDataDir();
+        var cdpPort         = config.cdpPort || await getFreePort();
 
         await this._startLocalChrome(browserId, config, pageUrl, tempUserDataDir);
 
-        var cdpClientInfo = await getCdpClientInfo(config, browserId);
+        var cdpClientInfo = await getCdpClientInfo(cdpPort, browserId);
 
         if (cdpClientInfo.client) {
             await cdpClientInfo.client.Page.enable();
             await cdpClientInfo.client.Network.enable();
 
             if (config.emulation)
-                await setEmulation(cdpClientInfo.client, config.device);
+                await setEmulation(cdpClientInfo.client, config);
         }
 
-        Object.assign(cdpClientInfo, { config, tempUserDataDir });
+        Object.assign(cdpClientInfo, { config, cdpPort, tempUserDataDir });
 
         this.openedBrowsers[browserId] = cdpClientInfo;
     },
 
     async closeBrowser (browserId) {
-        var { tab, config } = this.openedBrowsers[browserId];
+        var { tab, config, cdpPort } = this.openedBrowsers[browserId];
 
         if (tab && config.headless)
-            await remoteChrome.closeTab({ id: tab.id, host: config.cdpArgs.host, port: config.cdpArgs.port });
+            await remoteChrome.closeTab({ id: tab.id, port: cdpPort });
         else
             await browserTools.close(browserId);
 
