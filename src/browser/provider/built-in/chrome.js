@@ -20,6 +20,9 @@ const CONFIG_CACHE_CLEAR_TIMEOUT = 2 * 60 * 1000;
 
 const CONFIG_TERMINATOR_RE = /(\s+|^)-/;
 
+const DEFAULT_DEVICE_DATA = {
+    capabilities
+}
 
 var configCache = {};
 
@@ -28,10 +31,12 @@ function hasMatch (array, re) {
 }
 
 function findMatch (array, re) {
-    return array
-        .map(option => option.match(re))
-        .filter(match => !!match)
-        .map(match => match[1])[0];
+    var foundMatch = array
+        .map((option, index) => ({ match: option.match(re), index }))
+        .filter(({ match }) => !!match)
+        .map(({ match, index }) => ({ match: match[1], index }))[0];
+
+    return foundMatch || { match: '', index: -1 };
 }
 
 function splitEscaped (str, splitterChar) {
@@ -52,51 +57,55 @@ function splitEscaped (str, splitterChar) {
     return result;
 }
 
-function splitArgs (str) {
+function splitConfig (str) {
     var configTerminatorMatch = str.match(CONFIG_TERMINATOR_RE);
 
     if (!configTerminatorMatch)
-        return { configString: str, userArgs: '' };
+        return { modesString: str, userArgs: '' };
 
     return {
-        configString: str.substr(0, configTerminatorMatch.index),
-        userArgs:     str.substr(configTerminatorMatch.index + configTerminatorMatch[1].length)
+        modesString: str.substr(0, configTerminatorMatch.index),
+        userArgs:    str.substr(configTerminatorMatch.index + configTerminatorMatch[1].length)
     };
 }
 
 function splitModes (str) {
-    var modes = splitEscaped(str, ':');
+    var parsed   = splitEscaped(str, ':');
+    var pathMode = findMatch(parsed, /^path=(.*)/);
 
-    var result = {
-        headless:  hasMatch(modes, /^headless$/),
-        emulation: hasMatch(modes, /^emulation$/),
-        path:      findMatch(modes, /^path=(.*)/) || ''
+    if (OS.win && pathMode.index > -1 && pathMode.index < parsed.length - 1 && pathMode.match.match(/^A-Za-z$/))
+        pathMode.match += ':' + parsed[pathMode.index + 1];
+
+    var modes = {
+        headless:  hasMatch(parsed, /^headless$/),
+        emulation: hasMatch(parsed, /^emulation$/),
+        path:      pathMode.match
     };
 
-    var countOfModes = Object.keys(result).reduce((count, key) => result[key] ? count + 1 : count, 0);
+    var countOfModes  = Object.keys(modes).reduce((count, key) => modes[key] ? count + 1 : count, 0);
+    var optionsString = countOfModes < Object.keys(modes).length ? parsed [parsed.length - 1] : '';
 
-    result.options = countOfModes > Object.keys(result).length ? modes [modes.length - 1] : '';
-
-    return result;
+    return { modes, optionsString };
 }
 
 function splitOptions (str) {
-    var options    = splitEscaped(str, ';');
-    var deviceName = findMatch(options, /^deviceName=(.*)/);
-    var deviceData = deviceName ? findDevice(deviceName) : {};
+    var parsed     = splitEscaped(str, ';');
+    var deviceName = findMatch(parsed, /^deviceName=(.*)/).match;
+    var deviceData = deviceName ? findDevice(deviceName) : null;
+    var deviceBasedOptions = getDeviceBasedOptions;
 
-    var mobile      = hasMatch(options, /^mobile$/) || deviceData.capabilities.indexOf('mobile') >= 0;
-    var orientation = findMatch(options, /^orientation=(.*)/) || (mobile ? 'vertical' : 'horizontal');
+    var mobile      = hasMatch(parsed, /^mobile$/) || deviceData.capabilities.indexOf('mobile') >= 0;
+    var orientation = findMatch(parsed, /^orientation=(.*)/) || (mobile ? 'vertical' : 'horizontal').match;
 
     return {
         mobile:      mobile,
         orientation: orientation,
-        touch:       hasMatch(options, /^touch$/) || deviceData.capabilities.indexOf('touch') >= 0,
-        width:       findMatch(options, /^width=(.*)/) || deviceData.screen[orientation].width,
-        height:      findMatch(options, /^height=(.*)/) || deviceData.screen[orientation].height,
-        density:     findMatch(options, /^density=(.*)/) || deviceData.screen['device-pixel-ratio'],
-        userAgent:   findMatch(options, /^userAgent=(.*)/) || deviceData['user-agent'],
-        cdpPort:     findMatch(options, /^cdpPort=(.*)/) || ''
+        touch:       hasMatch(parsed, /^touch$/) || deviceData.capabilities.indexOf('touch') >= 0,
+        width:       findMatch(parsed, /^width=(.*)/).match || deviceData.screen[orientation].width,
+        height:      findMatch(parsed, /^height=(.*)/).match || deviceData.screen[orientation].height,
+        density:     findMatch(parsed, /^density=(.*)/).match || deviceData.screen['device-pixel-ratio'],
+        userAgent:   findMatch(parsed, /^userAgent=(.*)/).match || deviceData['user-agent'],
+        cdpPort:     findMatch(parsed, /^cdpPort=(.*)/).match || ''
     };
 }
 
@@ -111,11 +120,11 @@ function findDevice (deviceName) {
 }
 
 async function getNewConfig (configString) {
-    var { userArgs, configString } = splitArgs();
-    var { modes, options } = splitModes(configString);
-    var config = splitOptions(options);
+    var { userArgs, modesString } = splitConfig(configString);
+    var { modes, optionsString }  = splitModes(modesString);
+    var options                   = splitOptions(optionsString);
 
-    return Object.assign({ userArgs }, modes, config);
+    return Object.assign({ userArgs }, modes, options);
 }
 
 async function getConfig (configString) {
@@ -235,7 +244,7 @@ export default {
 
     isMultiBrowser: false,
 
-    async _startLocalChrome (browserId, config, pageUrl, tempUserDataDir) {
+    async _startLocalChrome (browserId, config, cdpPort, pageUrl, tempUserDataDir) {
         var chromeInfo = null;
 
         if (config.path)
@@ -245,7 +254,7 @@ export default {
 
         var chromeOpenParameters = Object.assign({}, chromeInfo);
 
-        chromeOpenParameters.cmd = buildChromeArgs(config, chromeOpenParameters.cmd, tempUserDataDir);
+        chromeOpenParameters.cmd = buildChromeArgs(config, cdpPort, chromeOpenParameters.cmd, tempUserDataDir);
 
         await browserTools.open(chromeOpenParameters, pageUrl);
 
@@ -257,7 +266,7 @@ export default {
         var tempUserDataDir = createTempUserDataDir();
         var cdpPort         = config.cdpPort || await getFreePort();
 
-        await this._startLocalChrome(browserId, config, pageUrl, tempUserDataDir);
+        await this._startLocalChrome(browserId, config, cdpPort, pageUrl, tempUserDataDir);
 
         var cdpClientInfo = await getCdpClientInfo(cdpPort, browserId);
 
