@@ -10,7 +10,7 @@ var QUARANTINE_MODE_SCREENSHOT_PATH_RE = /Screenshot: ___test-screenshots___\\\d
 var counter = 5;
 
 if (config.useLocalBrowsers) {
-    while (counter--)
+    while (counter--) {
         describe.only('Screenshots on fails', function () {
 
             afterEach(assertionHelper.removeScreenshotDir);
@@ -115,4 +115,5 @@ if (config.useLocalBrowsers) {
                     });
             });
         });
+    }
 }
