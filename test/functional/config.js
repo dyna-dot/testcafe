@@ -91,7 +91,7 @@ testingEnvironments[testingEnvironmentNames.mobileBrowsers] = {
 
 testingEnvironments[testingEnvironmentNames.localBrowsers] = {
     browsers: [
-        /*{
+        {
             platform:    'Windows 10',
             browserName: 'chrome',
             alias:       'chrome'
@@ -101,7 +101,7 @@ testingEnvironments[testingEnvironmentNames.localBrowsers] = {
             browserName: 'internet explorer',
             version:     '11.0',
             alias:       'ie'
-        },*/
+        },
         {
             platform:    'Windows 10',
             browserName: 'firefox',
