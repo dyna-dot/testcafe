@@ -29,5 +29,7 @@ build: off
 test_script:
 - cmd: >-
     start /D "C:\Program Files (x86)\Mozilla Firefox" firefox.exe -new-window https://google.com
+
     set DEBUG=testcafe:test-run:*
+
     npm test
