@@ -104,7 +104,7 @@ export default class Capturer {
         this.testEntry.hasScreenshots = true;
         this.testEntry.path           = this.screenshotPathForReport;
         console.log('106:', this.testEntry.path);
-
+        console.log('return screenshot Path:', screenshotPath);
         return screenshotPath;
     }
 

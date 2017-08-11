@@ -59,6 +59,7 @@ export default class BrowserManipulationQueue {
             return await capture();
         }
         catch (err) {
+            console.log('ERROR!!!', err);
             this.warningLog.addWarning(WARNING_MESSAGE.screenshotError, err.message);
             return null;
         }
