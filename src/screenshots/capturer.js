@@ -61,23 +61,40 @@ export default class Capturer {
     }
 
     async _takeScreenshot (filePath, pageWidth, pageHeight) {
+        console.log('_takeScreenshot', filePath, pageWidth, pageHeight);
         await ensureDir(dirname(filePath));
+        console.log('ensureDir');
         await this.provider.takeScreenshot(this.browserId, filePath, pageWidth, pageHeight);
+        console.log('screenshot taken');
     }
 
     async _capture (forError, pageWidth, pageHeight, customScreenshotPath) {
-        if (!this.enabled)
+        console.log('_capture');
+        if (!this.enabled) {
+            console.log('!enabled');
             return null;
+        }
+
 
         var fileName = this._getFileName(forError);
 
+        console.log('78:', fileName);
+
         fileName = forError ? joinPath('errors', fileName) : fileName;
+
+        console.log('82:', fileName);
 
         var screenshotPath = this._getSreenshotPath(fileName, customScreenshotPath);
 
+        console.log('86:', screenshotPath);
+
         await this._takeScreenshot(screenshotPath, pageWidth, pageHeight);
 
+        console.log('93:', 'after _takeScreenshot');
+
         await generateThumbnail(screenshotPath);
+
+        console.log('97:', 'generated');
 
         // NOTE: if test contains takeScreenshot action with custom path
         // we should specify the most common screenshot folder in report
@@ -86,6 +103,7 @@ export default class Capturer {
 
         this.testEntry.hasScreenshots = true;
         this.testEntry.path           = this.screenshotPathForReport;
+        console.log('106:', this.testEntry.path);
 
         return screenshotPath;
     }

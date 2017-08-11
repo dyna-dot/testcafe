@@ -50,6 +50,7 @@ export default class BrowserManipulationQueue {
 
     async _takeScreenshot (capture) {
         if (!this.screenshotCapturer.enabled) {
+            console.log('53: !enabled');
             this.warningLog.addWarning(WARNING_MESSAGE.screenshotsPathNotSpecified);
             return null;
         }
