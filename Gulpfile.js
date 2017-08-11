@@ -277,7 +277,7 @@ gulp.task('ts-definitions', ['clean'], function () {
 });
 
 gulp.task('fast-build', ['server-scripts', 'client-scripts', 'styles', 'images', 'templates', 'ts-definitions']);
-gulp.task('build', ['lint', 'fast-build']);
+gulp.task('build', ['fast-build']);
 
 // Test
 gulp.task('test-server', ['build'], function () {
