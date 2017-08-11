@@ -72,12 +72,12 @@ exports.errorInEachBrowserContains = function errorInEachBrowserContains (testEr
 
     // NOTE: if errors are the same in different browsers
     if (Array.isArray(testErrors))
-        expect(testErrors[errorIndex]).contains(message);
+        expect(testErrors[errorIndex]).contains(message, `${testErrors[errorIndex]} should contain ${message}`);
 
     //NOTE: if they are different
     else {
         Object.keys(testErrors).forEach(function (key) {
-            expect(testErrors[key][errorIndex]).contains(message);
+            expect(testErrors[key][errorIndex]).contains(message, `${testErrors[key][errorIndex]} should contain ${message}`);
         });
     }
 };
@@ -88,12 +88,12 @@ exports.errorInEachBrowserContainsRegExp = function errorInEachBrowserContains (
 
     // NOTE: if errors are the same in different browsers
     if (Array.isArray(testErrors))
-        expect(messageRE.test(testErrors[errorIndex])).equals(true);
+        expect(messageRE.test(testErrors[errorIndex])).equals(true, `${testErrors[errorIndex]} should contain ${messageRE}`);
 
     //NOTE: if they are different
     else {
         Object.keys(testErrors).forEach(function (key) {
-            expect(messageRE.test(testErrors[key][errorIndex])).equals(true);
+            expect(messageRE.test(testErrors[key][errorIndex])).equals(true, `${testErrors[key][errorIndex]} should contain ${messageRE}`);
         });
     }
 };
@@ -104,12 +104,12 @@ exports.errorInEachBrowserNotContains = function errorInEachBrowserNotContains (
 
     // NOTE: if errors are the same in different browsers
     if (Array.isArray(testErrors))
-        expect(testErrors[errorIndex]).not.contains(message);
+        expect(testErrors[errorIndex]).not.contains(message, `${testErrors[errorIndex]} shouldn't contain ${message}`);
 
     //NOTE: if the are different
     else {
         Object.keys(testErrors).forEach(function (key) {
-            expect(testErrors[key][errorIndex]).not.contains(message);
+            expect(testErrors[key][errorIndex]).not.contains(message, `${testErrors[key][errorIndex]} shouldn't contain ${message}`);
         });
     }
 };
