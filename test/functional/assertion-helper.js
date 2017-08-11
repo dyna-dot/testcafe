@@ -77,6 +77,10 @@ exports.errorInEachBrowserContains = function errorInEachBrowserContains (testEr
     //NOTE: if they are different
     else {
         Object.keys(testErrors).forEach(function (key) {
+            console.log(`${testErrors[key][errorIndex]} should contain ${message}`);
+        });
+
+        Object.keys(testErrors).forEach(function (key) {
             expect(testErrors[key][errorIndex]).contains(message, `${testErrors[key][errorIndex]} should contain ${message}`);
         });
     }
@@ -92,6 +96,10 @@ exports.errorInEachBrowserContainsRegExp = function errorInEachBrowserContains (
 
     //NOTE: if they are different
     else {
+        Object.keys(testErrors).forEach(function (key) {
+            console.log(`${testErrors[key][errorIndex]} should contain ${messageRE}`);
+        });
+
         Object.keys(testErrors).forEach(function (key) {
             expect(messageRE.test(testErrors[key][errorIndex])).equals(true, `${testErrors[key][errorIndex]} should contain ${messageRE}`);
         });
