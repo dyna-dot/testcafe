@@ -7,7 +7,7 @@ var REPORT_SCREENSHOT_PATH_TEXT_RE     = /___test-screenshots___\\\d{4,4}-\d{2,2
 var ERROR_SCREENSHOT_PATH_RE           = /Screenshot: ___test-screenshots___\\\d{4,4}-\d{2,2}-\d{2,2}_\d{2,2}-\d{2,2}-\d{2,2}\\test-1\\\S+\\errors\\\d.png/;
 var QUARANTINE_MODE_SCREENSHOT_PATH_RE = /Screenshot: ___test-screenshots___\\\d{4,4}-\d{2,2}-\d{2,2}_\d{2,2}-\d{2,2}-\d{2,2}\\test-1\\run-3\\\S+\\errors\\\d.png/;
 
-var counter = 5;
+var counter = 12;
 
 if (config.useLocalBrowsers) {
     while (counter--) {
