@@ -260,3 +260,7 @@ after(function () {
 
     return closeLocalBrowsers();
 });
+
+
+// TODO: Run takeScreenshot tests first because other tests heavily impact them
+require('./fixtures/api/es-next/take-screenshot/test');

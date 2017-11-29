@@ -5,6 +5,7 @@ import NODE_TYPE_DESCRIPTIONS from './utils/node-type-descriptions';
 import RequestBarrier from './request-barrier';
 import * as pageUnloadBarrier from './page-unload-barrier';
 import { preventRealEvents, disableRealEventsPreventing } from './prevent-real-events';
+import scrollController from './scroll-controller';
 
 import * as serviceUtils from './utils/service';
 import * as domUtils from './utils/dom';
@@ -31,6 +32,7 @@ exports.RequestBarrier              = RequestBarrier;
 exports.pageUnloadBarrier           = pageUnloadBarrier;
 exports.preventRealEvents           = preventRealEvents;
 exports.disableRealEventsPreventing = disableRealEventsPreventing;
+exports.scrollController            = scrollController;
 
 exports.serviceUtils           = serviceUtils;
 exports.domUtils               = domUtils;

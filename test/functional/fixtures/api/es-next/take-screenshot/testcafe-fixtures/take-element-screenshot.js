@@ -1,0 +1,66 @@
+import { ClientFunction } from 'testcafe';
+import { parse } from 'useragent';
+import { saveWindowState, restoreWindowState } from '../../../../../window-helpers';
+
+
+const getUserAgent        = ClientFunction(() => navigator.userAgent.toString());
+
+const enableScrollWatcher = ClientFunction(() => window.addEventListener('scroll', () => {
+    window.wasScrolled = true;
+}));
+
+const checkWindowScroll   = ClientFunction(() => window.wasScrolled);
+
+// NOTE: to preserve callsites, add new tests AFTER the existing ones
+fixture `Take a screenshot`
+    .page `../pages/element-screenshot.html`
+    .beforeEach(async t => {
+        const ua       = await getUserAgent();
+
+        t.ctx.parsedUA = parse(ua);
+
+        await saveWindowState(t);
+
+        await t.maximizeWindow();
+    })
+    .afterEach(t => restoreWindowState(t));
+
+test('Element', async t => {
+    await enableScrollWatcher();
+
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png');
+
+    await t.expect(await checkWindowScroll()).notOk();
+});
+
+test('Element with margins', async t => {
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { withMargins: true });
+});
+
+test('Default crop', async t => {
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { width: 50, height: 50 } });
+});
+
+test('Top-left', async t => {
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 0, top: 0, width: 50, height: 50 } });
+});
+
+test('Top-right', async t => {
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: -50, top: 0, height: 50 } });
+});
+
+test('Bottom-left', async t => {
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 0, top: -50, right: -50, height: 50 } });
+});
+
+test('Bottom-right', async t => {
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 50, top: -50 } });
+});
+
+test('Incorrect action selector argument', async t => {
+    await t.takeElementScreenshot(1, 'custom/' + t.ctx.parsedUA.family + '.png');
+});
+
+test('Incorrect action path argument', async t => {
+    await t.takeElementScreenshot('table', 1);
+});

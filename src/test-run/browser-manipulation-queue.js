@@ -58,7 +58,7 @@ export default class BrowserManipulationQueue {
             return await capture();
         }
         catch (err) {
-            this.warningLog.addWarning(WARNING_MESSAGE.screenshotError, err.message);
+            this.warningLog.addWarning(WARNING_MESSAGE.screenshotError, err.stack);
             return null;
         }
     }
@@ -67,24 +67,26 @@ export default class BrowserManipulationQueue {
         var command = this.commands.shift();
 
         switch (command.type) {
+            case COMMAND_TYPE.takeElementScreenshot:
             case COMMAND_TYPE.takeScreenshot:
                 return await this._takeScreenshot(() => this.screenshotCapturer.captureAction({
-                    customPath: command.path,
-                    pageWidth:  driverMsg.innerWidth,
-                    pageHeight: driverMsg.innerHeight
+                    customPath:     command.path,
+                    pageDimensions: driverMsg.pageDimensions,
+                    cropDimensions: driverMsg.cropDimensions,
+                    markSeed:       command.markSeed
                 }));
 
             case COMMAND_TYPE.takeScreenshotOnFail:
                 return await this._takeScreenshot(() => this.screenshotCapturer.captureError({
-                    pageWidth:  driverMsg.innerWidth,
-                    pageHeight: driverMsg.innerHeight
+                    pageDimensions: driverMsg.pageDimensions,
+                    markSeed:       command.markSeed
                 }));
 
             case COMMAND_TYPE.resizeWindow:
-                return await this._resizeWindow(command.width, command.height, driverMsg.innerWidth, driverMsg.innerHeight);
+                return await this._resizeWindow(command.width, command.height, driverMsg.pageDimensions.innerWidth, driverMsg.pageDimensions.innerHeight);
 
             case COMMAND_TYPE.resizeWindowToFitDevice:
-                return await this._resizeWindowToFitDevice(command.device, command.options.portraitOrientation, driverMsg.innerWidth, driverMsg.innerHeight);
+                return await this._resizeWindowToFitDevice(command.device, command.options.portraitOrientation, driverMsg.pageDimensions.innerWidth, driverMsg.pageDimensions.innerHeight);
 
             case COMMAND_TYPE.maximizeWindow:
                 return await this._maximizeWindow();
