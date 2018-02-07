@@ -25,6 +25,14 @@ fixture `Take a screenshot`
     })
     .afterEach(t => restoreWindowState(t));
 
+test('Incorrect action selector argument', async t => {
+    await t.takeElementScreenshot(1, 'custom/' + t.ctx.parsedUA.family + '.png');
+});
+
+test('Incorrect action path argument', async t => {
+    await t.takeElementScreenshot('table', 1);
+});
+
 test('Element', async t => {
     await enableScrollWatcher();
 
@@ -55,12 +63,4 @@ test('Bottom-left', async t => {
 
 test('Bottom-right', async t => {
     await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 50, top: -50 } });
-});
-
-test('Incorrect action selector argument', async t => {
-    await t.takeElementScreenshot(1, 'custom/' + t.ctx.parsedUA.family + '.png');
-});
-
-test('Incorrect action path argument', async t => {
-    await t.takeElementScreenshot('table', 1);
 });

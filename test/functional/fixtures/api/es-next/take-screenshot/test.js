@@ -141,9 +141,9 @@ describe('[API] t.takeElementScreenshot()', function () {
                     );
 
                     expect(errs[0]).to.contains(
-                        ' 56 |test(\'Incorrect action selector argument\', async t => {' +
-                        ' > 57 |    await t.takeElementScreenshot(1, \'custom/\' + t.ctx.parsedUA.family + \'.png\');' +
-                        ' 58 |});'
+                        ' 28 |test(\'Incorrect action selector argument\', async t => {' +
+                        ' > 29 |    await t.takeElementScreenshot(1, \'custom/\' + t.ctx.parsedUA.family + \'.png\');' +
+                        ' 30 |});'
                     );
                 });
         });
@@ -156,9 +156,9 @@ describe('[API] t.takeElementScreenshot()', function () {
                 .catch(function (errs) {
                     expect(errs[0]).to.contains('The "path" argument is expected to be a non-empty string, but it was number.');
                     expect(errs[0]).to.contains(
-                        ' 60 |test(\'Incorrect action path argument\', async t => {' +
-                        ' > 61 |    await t.takeElementScreenshot(\'table\', 1);' +
-                        ' 62 |});'
+                        ' 32 |test(\'Incorrect action path argument\', async t => {' +
+                        ' > 33 |    await t.takeElementScreenshot(\'table\', 1);' +
+                        ' 34 |});'
                     );
                 });
         });
