@@ -51,7 +51,7 @@ class ManipulationExecutor extends AutomationExecutor {
         return message;
     }
 
-    runManipulation () {
+    _runManipulation () {
         var result  = null;
 
         hideUI();
@@ -100,11 +100,15 @@ class ManipulationExecutor extends AutomationExecutor {
     }
 
     createAutomation () {
-        return { run: () => this.runManipulation() };
+        return { run: () => this._runManipulation() };
     }
 
     shouldReturnResult () {
         return true;
+    }
+
+    shouldRerunOnError () {
+        return false;
     }
 }
 

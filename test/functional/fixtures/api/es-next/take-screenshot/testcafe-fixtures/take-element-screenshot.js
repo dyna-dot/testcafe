@@ -15,7 +15,7 @@ const checkWindowScroll   = ClientFunction(() => window.wasScrolled);
 fixture `Take a screenshot`
     .page `../pages/element-screenshot.html`
     .beforeEach(async t => {
-        const ua       = await getUserAgent();
+        const ua = await getUserAgent();
 
         t.ctx.parsedUA = parse(ua);
 

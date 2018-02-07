@@ -100,6 +100,9 @@ export default class AutomationExecutor {
                     .run(strictElementCheck);
             })
             .catch(err => {
+                if (!this.shouldRerunOnError(err))
+                    return Promise.resolve();
+
                 var timeoutExpired = Date.now() - this.executionStartTime >= this.commandSelectorTimeout;
 
                 if (timeoutExpired) {
@@ -148,6 +151,10 @@ export default class AutomationExecutor {
 
     shouldReturnResult (result) { // eslint-disable-line no-unused-vars
         return false;
+    }
+
+    shouldRerunOnError (error) { // eslint-disable-line no-unused-vars
+        return true;
     }
 
     // Public API
