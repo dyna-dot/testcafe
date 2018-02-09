@@ -42,7 +42,7 @@ test('Element', async t => {
 });
 
 test('Element with margins', async t => {
-    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { withMargins: true });
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { includeMargins: true });
 });
 
 test('Default crop', async t => {

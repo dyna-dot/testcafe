@@ -50,7 +50,7 @@ export default function ensureCropOptions (element, options) {
         bottom: elementRectangle.bottom
     };
 
-    if (options.withMargins) {
+    if (options.includeMargins) {
         var computedStyle = styleUtils.getComputedStyle(element);
 
         var marginLeft = pixelsToNumber(computedStyle.marginLeft);
@@ -86,7 +86,7 @@ export default function ensureCropOptions (element, options) {
     var viewportDimensions = styleUtils.getViewportDimensions();
 
     if (elementBounds.width > viewportDimensions.width || elementBounds.height > viewportDimensions.height)
-        options.forceCenter = true;
+        options.scrollToCenter = true;
 
     if (typeof options.scrollTargetX !== 'number')
         options.scrollTargetX = determineScrollPoint(options.crop.left, options.crop.right, viewportDimensions.width);

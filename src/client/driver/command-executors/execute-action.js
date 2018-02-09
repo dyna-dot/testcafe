@@ -4,6 +4,8 @@ import {
     parseKeySequence,
 } from '../deps/testcafe-core';
 
+import { ensureElements, createElementDescriptor, createAdditionalElementDescriptor } from '../utils/ensure-elements';
+
 import AutomationExecutor from './automation-executor';
 
 import {
@@ -67,6 +69,8 @@ function ensureFileInput (element) {
         throw new ActionElementIsNotFileInputError();
 }
 
+
+
 class ActionExecutor extends AutomationExecutor {
     ensureCommandElementsProperties () {
         super.ensureCommandElementsProperties();
@@ -88,32 +92,19 @@ class ActionExecutor extends AutomationExecutor {
     }
 
     ensureCommandElements () {
-        super.ensureCommandElements();
+        var elements = [];
 
-        if (this.command.type === COMMAND_TYPE.dragToElement) {
-            this.ensureElement(
-                this.command.destinationSelector,
-                () => new ActionAdditionalElementNotFoundError('destinationSelector'),
-                () => new ActionAdditionalElementIsInvisibleError('destinationSelector'),
-                nodeDescription => new ActionAdditionalSelectorMatchesWrongNodeTypeError('destinationSelector', nodeDescription)
-            );
-        }
+        if (this.command.selector)
+            elements.push(createElementDescriptor(this.command.selector));
 
+        if (this.command.type === COMMAND_TYPE.dragToElement)
+            elements.push(createAdditionalElementDescriptor(this.command.destinationSelector, 'destinationSelector'));
         else if (this.command.type === COMMAND_TYPE.selectEditableContent) {
-            this.ensureElement(
-                this.command.startSelector,
-                () => new ActionAdditionalElementNotFoundError('startSelector'),
-                () => new ActionAdditionalElementIsInvisibleError('startSelector'),
-                nodeDescription => new ActionAdditionalSelectorMatchesWrongNodeTypeError('startSelector', nodeDescription)
-            );
-
-            this.ensureElement(
-                this.command.endSelector || this.command.startSelector,
-                () => new ActionAdditionalElementNotFoundError('endSelector'),
-                () => new ActionAdditionalElementIsInvisibleError('endSelector'),
-                nodeDescription => new ActionAdditionalSelectorMatchesWrongNodeTypeError('endSelector', nodeDescription)
-            );
+            elements.push(createAdditionalElementDescriptor(this.command.startSelector, 'startSelector'));
+            elements.push(createAdditionalElementDescriptor(this.command.endSelector || this.command.startSelector, 'endSelector'));
         }
+
+        return ensureElements(elements);
     }
 
     ensureCommandArguments () {
@@ -127,57 +118,7 @@ class ActionExecutor extends AutomationExecutor {
         }
     }
 
-    createAutomation () {
-        var selectArgs = null;
 
-        switch (this.command.type) {
-            case COMMAND_TYPE.click :
-                if (/option|optgroup/.test(domUtils.getTagName(this.elements[0])))
-                    return new SelectChildClickAutomation(this.elements[0], this.command.options);
-
-                return new ClickAutomation(this.elements[0], this.command.options);
-
-            case COMMAND_TYPE.rightClick :
-                return new RClickAutomation(this.elements[0], this.command.options);
-
-            case COMMAND_TYPE.doubleClick :
-                return new DblClickAutomation(this.elements[0], this.command.options);
-
-            case COMMAND_TYPE.hover :
-                return new HoverAutomation(this.elements[0], this.command.options);
-
-            case COMMAND_TYPE.drag :
-                return new DragToOffsetAutomation(this.elements[0], this.command.dragOffsetX, this.command.dragOffsetY, this.command.options);
-
-            case COMMAND_TYPE.dragToElement :
-                return new DragToElementAutomation(this.elements[0], this.elements[1], this.command.options);
-
-            case COMMAND_TYPE.typeText:
-                return new TypeAutomation(this.elements[0], this.command.text, this.command.options);
-
-            case COMMAND_TYPE.selectText:
-            case COMMAND_TYPE.selectTextAreaContent:
-                selectArgs = calculateSelectTextArguments(this.elements[0], this.command);
-
-                return new SelectTextAutomation(this.elements[0], selectArgs.startPos, selectArgs.endPos, this.command.options);
-
-            case COMMAND_TYPE.selectEditableContent:
-                return new SelectEditableContentAutomation(this.elements[0], this.elements[1], this.command.options);
-
-            case COMMAND_TYPE.pressKey:
-                return new PressAutomation(parseKeySequence(this.command.keys).combinations, this.command.options);
-
-            case COMMAND_TYPE.setFilesToUpload :
-                return new UploadAutomation(this.elements[0], this.command.filePath,
-                    filePaths => new ActionCanNotFindFileToUploadError(filePaths)
-                );
-
-            case COMMAND_TYPE.clearUpload :
-                return new UploadAutomation(this.elements[0]);
-        }
-
-        return null;
-    }
 }
 
 export default function executeAction (command, globalSelectorTimeout, statusBar, testSpeed) {

@@ -63,14 +63,14 @@ export class ScrollOptions extends OffsetOptions {
     constructor (obj, validate) {
         super();
 
-        this.forceCenter   = false;
+        this.scrollToCenter   = false;
 
         this._assignFrom(obj, validate);
     }
 
     _getAssignableProperties () {
         return super._getAssignableProperties().concat([
-            { name: 'forceCenter', type: booleanOption }
+            { name: 'scrollToCenter', type: booleanOption }
         ]);
     }
 }
@@ -80,17 +80,15 @@ export class ElementScreenshotOptions extends ActionOptions {
     constructor (obj, validate) {
         super();
 
-        this.scrollTargetX = null;
-        this.scrollTargetY = null;
-        this.withMargins   = false;
+        this.scrollTargetX  = null;
+        this.scrollTargetY  = null;
+        this.includeMargins = false;
 
         this.crop = {
             left:   null,
             right:  null,
             top:    null,
-            bottom: null,
-            width:  null,
-            height: null
+            bottom: null
         };
 
         this._assignFrom(obj, validate);
@@ -100,13 +98,11 @@ export class ElementScreenshotOptions extends ActionOptions {
         return super._getAssignableProperties().concat([
             { name: 'scrollTargetX', type: integerOption },
             { name: 'scrollTargetY', type: integerOption },
-            { name: 'crop.width', type: integerOption },
-            { name: 'crop.height', type: integerOption },
             { name: 'crop.left', type: integerOption },
             { name: 'crop.right', type: integerOption },
             { name: 'crop.top', type: integerOption },
             { name: 'crop.bottom', type: integerOption },
-            { name: 'withMargins', type: booleanOption }
+            { name: 'includeMargins', type: booleanOption }
         ]);
     }
 }

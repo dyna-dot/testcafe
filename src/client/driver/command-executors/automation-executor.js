@@ -2,6 +2,7 @@ import { Promise } from '../deps/hammerhead';
 
 import {
     domUtils,
+    promiseUtils,
     RequestBarrier,
     pageUnloadBarrier,
     delay,
@@ -77,8 +78,13 @@ export default class AutomationExecutor {
         return delay((1 - this.command.options.speed) * MAX_DELAY_AFTER_EXECUTION);
     }
 
-    _runRecursively (strictElementCheck) {
-        return this._awaitEnsureCommandElements()
+    _isExecutionTimeoutExpired () {
+        return Date.now() - this.executionStartTime >= this.commandSelectorTimeout;
+    }
+
+    _runAction (strictElementCheck) {
+        return this
+            .ensureCommandElements()
             .then(() => this.ensureCommandElementsProperties())
             .then(() => {
                 this.ensureCommandOptions();
@@ -99,45 +105,79 @@ export default class AutomationExecutor {
                 return automation
                     .run(strictElementCheck);
             })
-            .catch(err => {
-                if (!this.shouldRerunOnError(err))
-                    return Promise.resolve();
+    }
 
-                var timeoutExpired = Date.now() - this.executionStartTime >= this.commandSelectorTimeout;
+    _runRecursively () {
+        var actionFinished     = false;
+        var strictElementCheck = true;
 
-                if (timeoutExpired) {
-                    if (err.message === AUTOMATION_ERROR_TYPES.foundElementIsNotTarget) {
-                        // If we can't get a target element via elementFromPoint but it's
-                        // visible we click on the point where the element is located.
-                        return this._runRecursively(false);
+        return promiseUtils.whilst(() => !actionFinished, () => {
+            return this
+                ._runAction(true)
+                .then(() => {
+                    actionFinished = true;
+                })
+                .catch(err => {
+                    var timeoutExpired =
+
+                    if (timeoutExpired) {
+                        if (err.message === AUTOMATION_ERROR_TYPES.foundElementIsNotTarget) {
+                            // If we can't get a target element via elementFromPoint but it's
+                            // visible we click on the point where the element is located.
+                            return this._runRecursively(false);
+                        }
+
+                        throw err.message === AUTOMATION_ERROR_TYPES.elementIsInvisibleError ?
+                            new ActionElementIsInvisibleError() : err;
                     }
 
-                    throw err.message === AUTOMATION_ERROR_TYPES.elementIsInvisibleError ?
-                        new ActionElementIsInvisibleError() : err;
-                }
+                    return delay(CHECK_ELEMENT_IN_AUTOMATIONS_INTERVAL);
+                });
+        }
 
-                return delay(CHECK_ELEMENT_IN_AUTOMATIONS_INTERVAL).then(() => this._runRecursively(strictElementCheck));
-            });
     }
 
     // Overridable API
     ensureCommandArguments () {
+        if (this.command.type === COMMAND_TYPE.pressKey) {
+            var parsedKeySequence = parseKeySequence(this.command.keys);
 
-    }
-
-    ensureCommandElements () {
-        if (this.command.selector) {
-            this.ensureElement(
-                this.command.selector,
-                () => new ActionElementNotFoundError(),
-                () => new ActionElementIsInvisibleError(),
-                nodeDescription => new ActionSelectorMatchesWrongNodeTypeError(nodeDescription)
-            );
+            if (parsedKeySequence.error)
+                throw new ActionIncorrectKeysError('keys');
         }
     }
 
-    ensureCommandElementsProperties () {
+    ensureCommandElements () {
+        var elements = [];
 
+        if (this.command.selector)
+            elements.push(createElementDescriptor(this.command.selector));
+
+        if (this.command.type === COMMAND_TYPE.dragToElement)
+            elements.push(createAdditionalElementDescriptor(this.command.destinationSelector, 'destinationSelector'));
+        else if (this.command.type === COMMAND_TYPE.selectEditableContent) {
+            elements.push(createAdditionalElementDescriptor(this.command.startSelector, 'startSelector'));
+            elements.push(createAdditionalElementDescriptor(this.command.endSelector || this.command.startSelector, 'endSelector'));
+        }
+
+        return ensureElements(elements);
+    }
+
+    ensureCommandElementsProperties () {
+        if (this.command.type === COMMAND_TYPE.selectText)
+            ensureElementEditable(this.elements[0]);
+
+        else if (this.command.type === COMMAND_TYPE.selectTextAreaContent)
+            ensureTextAreaElement(this.elements[0]);
+
+        else if (this.command.type === COMMAND_TYPE.selectEditableContent) {
+            ensureContentEditableElement(this.elements[0], 'startSelector');
+            ensureContentEditableElement(this.elements[1], 'endSelector');
+            ensureRootContainer(this.elements);
+        }
+
+        else if (this.command.type === COMMAND_TYPE.setFilesToUpload || this.command.type === COMMAND_TYPE.clearUpload)
+            ensureFileInput(this.elements[0]);
     }
 
     ensureCommandOptions () {
@@ -146,41 +186,64 @@ export default class AutomationExecutor {
     }
 
     createAutomation () {
-        return DUMMY_AUTOMATION;
-    }
+        var selectArgs = null;
 
-    shouldReturnResult (result) { // eslint-disable-line no-unused-vars
-        return false;
-    }
+        switch (this.command.type) {
+            case COMMAND_TYPE.click :
+                if (/option|optgroup/.test(domUtils.getTagName(this.elements[0])))
+                    return new SelectChildClickAutomation(this.elements[0], this.command.options);
 
-    shouldRerunOnError (error) { // eslint-disable-line no-unused-vars
-        return true;
-    }
+                return new ClickAutomation(this.elements[0], this.command.options);
 
-    // Public API
-    ensureElement (selectorCommand, createNotFoundError, createIsInvisibleError, createHasWrongNodeTypeError) {
-        this.ensureElementsPromise = this.ensureElementsPromise
-            .then(() => {
-                var selectorExecutor = new SelectorExecutor(selectorCommand, this.globalSelectorTimeout, this.ensureElementsStartTime,
-                    createNotFoundError, createIsInvisibleError);
+            case COMMAND_TYPE.rightClick :
+                return new RClickAutomation(this.elements[0], this.command.options);
 
-                return selectorExecutor.getResult();
-            })
-            .then(el => {
-                if (!domUtils.isDomElement(el))
-                    throw createHasWrongNodeTypeError(NODE_TYPE_DESCRIPTIONS[el.nodeType]);
+            case COMMAND_TYPE.doubleClick :
+                return new DblClickAutomation(this.elements[0], this.command.options);
 
-                this.elements.push(el);
-            });
+            case COMMAND_TYPE.hover :
+                return new HoverAutomation(this.elements[0], this.command.options);
+
+            case COMMAND_TYPE.drag :
+                return new DragToOffsetAutomation(this.elements[0], this.command.dragOffsetX, this.command.dragOffsetY, this.command.options);
+
+            case COMMAND_TYPE.dragToElement :
+                return new DragToElementAutomation(this.elements[0], this.elements[1], this.command.options);
+
+            case COMMAND_TYPE.typeText:
+                return new TypeAutomation(this.elements[0], this.command.text, this.command.options);
+
+            case COMMAND_TYPE.selectText:
+            case COMMAND_TYPE.selectTextAreaContent:
+                selectArgs = calculateSelectTextArguments(this.elements[0], this.command);
+
+                return new SelectTextAutomation(this.elements[0], selectArgs.startPos, selectArgs.endPos, this.command.options);
+
+            case COMMAND_TYPE.selectEditableContent:
+                return new SelectEditableContentAutomation(this.elements[0], this.elements[1], this.command.options);
+
+            case COMMAND_TYPE.pressKey:
+                return new PressAutomation(parseKeySequence(this.command.keys).combinations, this.command.options);
+
+            case COMMAND_TYPE.setFilesToUpload :
+                return new UploadAutomation(this.elements[0], this.command.filePath,
+                    filePaths => new ActionCanNotFindFileToUploadError(filePaths)
+                );
+
+            case COMMAND_TYPE.clearUpload :
+                return new UploadAutomation(this.elements[0]);
+        }
+
+        return null;
     }
 
     execute () {
+        if (this.command.options && !this.command.options.speed)
+            this.command.options.speed = this.testSpeed;
+
         var startPromise = new Promise(resolve => {
             this.executionStartedHandler = resolve;
         });
-
-        if (this.command.options && !this.command.options.speed)
-            this.command.options.speed = this.testSpeed;
 
         var completionPromise = new Promise(resolve => {
             this.executionStartTime = new Date();
@@ -193,35 +256,19 @@ export default class AutomationExecutor {
                 return;
             }
 
-            var requestBarrier         = new RequestBarrier();
-            var scriptExecutionBarrier = new ScriptExecutionBarrier();
-
-            pageUnloadBarrier.watchForPageNavigationTriggers();
 
             this.commandSelectorTimeout = this._getSpecificTimeout();
 
-            var result = null;
-
             this.statusBar.showWaitingElementStatus(this.commandSelectorTimeout);
 
-            this._runRecursively(true)
-                .then(runResult => {
-                    if (this.shouldReturnResult(result))
-                        result = runResult;
+            var { actionPromise, barriersPromise } = runWithBarriers(() => this._runRecursively());
 
-                    return Promise.all([
-                        this._delayAfterExecution(),
-
-                        // NOTE: script can be added by xhr-request, so we should run
-                        // script execution barrier waiting after request barrier resolved
-                        requestBarrier
-                            .wait()
-                            .then(() => scriptExecutionBarrier.wait()),
-
-                        pageUnloadBarrier.wait()
-                    ]);
-                })
-                .then(() => resolve(new DriverStatus({ isCommandResult: true, result })))
+            actionPromise
+                .then(() => Promise.all([
+                    this._delayAfterExecution(),
+                    barriersPromise
+                ]))
+                .then(() => resolve(new DriverStatus({ isCommandResult: true })))
                 .catch(err => {
                     return this.statusBar.hideWaitingElementStatus(false)
                         .then(() => resolve(new DriverStatus({ isCommandResult: true, executionError: err })));

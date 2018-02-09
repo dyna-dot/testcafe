@@ -48,10 +48,10 @@ describe('Test run command options', function () {
             }, false);
 
             expect(JSON.parse(JSON.stringify(options))).eql({
-                offsetX:     15,
-                offsetY:     null,
-                forceCenter: false,
-                speed:       null
+                offsetX:        15,
+                offsetY:        null,
+                scrollToCenter: false,
+                speed:          null
             });
         });
 
@@ -208,10 +208,10 @@ describe('Test run command options', function () {
 
                 crop: {
                     left:   146,
-                    height: 50
+                    bottom: 50
                 },
 
-                withMargins: true,
+                includeMargins: true,
 
                 modifiers: {
                     alt: true
@@ -224,15 +224,13 @@ describe('Test run command options', function () {
                 speed:         null,
 
                 crop: {
-                    width:  null,
-                    height: 50,
                     left:   146,
                     right:  null,
                     top:    null,
-                    bottom: null
+                    bottom: 50
                 },
 
-                withMargins: true
+                includeMargins: true
             });
         });
 

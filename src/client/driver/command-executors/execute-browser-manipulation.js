@@ -34,7 +34,7 @@ class ManipulationExecutor extends AutomationExecutor {
         if (this.command.type === COMMAND_TYPE.takeElementScreenshot) {
             var { top, left } = this.elements[0].getBoundingClientRect();
 
-            if (this.command.options.withMargins) {
+            if (this.command.options.includeMargins) {
                 top -= this.command.options.marginTop;
                 left -= this.command.options.marginLeft;
             }
@@ -67,8 +67,8 @@ class ManipulationExecutor extends AutomationExecutor {
 
                 scrollController.stopPropagation();
 
-                var { offsetX, offsetY, forceCenter } = this.command.options;
-                var scrollAutomation     = new ScrollAutomation(this.elements[0], new ScrollOptions({ offsetX, offsetY, forceCenter }));
+                var { offsetX, offsetY, scrollToCenter } = this.command.options;
+                var scrollAutomation     = new ScrollAutomation(this.elements[0], new ScrollOptions({ offsetX, offsetY, scrollToCenter }));
 
                 return scrollAutomation.run();
             })

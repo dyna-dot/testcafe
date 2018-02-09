@@ -884,8 +884,8 @@ describe('Test run commands', function () {
 
                 options: {
                     crop: {
-                        width: 50,
-                        top:   13
+                        left: 50,
+                        top:  13
                     },
 
                     modifiers: {
@@ -913,15 +913,13 @@ describe('Test run commands', function () {
                     speed:         null,
 
                     crop: {
-                        width:  50,
-                        height: null,
-                        left:   null,
+                        left:   50,
                         right:  null,
                         top:    13,
                         bottom: null
                     },
 
-                    withMargins: false
+                    includeMargins: false
                 }
             });
         });

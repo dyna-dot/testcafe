@@ -38,7 +38,7 @@ export default class ScrollAutomation {
         this.element         = element;
         this.offsetX         = offsetOptions.offsetX;
         this.offsetY         = offsetOptions.offsetY;
-        this.forceCenter     = offsetOptions.forceCenter;
+        this.scrollToCenter  = offsetOptions.scrollToCenter;
         this.maxScrollMargin = DEFAULT_MAX_SCROLL_MARGIN;
     }
 
@@ -89,8 +89,8 @@ export default class ScrollAutomation {
     _getScrollToPoint (elementDimensions, { x, y }) {
         var horizontalCenter = Math.floor(elementDimensions.width / 2);
         var verticalCenter   = Math.floor(Math.floor(elementDimensions.height / 2));
-        var leftScrollMargin = this.forceCenter ? horizontalCenter : Math.min(this.maxScrollMargin, horizontalCenter);
-        var topScrollMargin  = this.forceCenter ? verticalCenter : Math.min(this.maxScrollMargin, verticalCenter);
+        var leftScrollMargin = this.scrollToCenter ? horizontalCenter : Math.min(this.maxScrollMargin, horizontalCenter);
+        var topScrollMargin  = this.scrollToCenter ? verticalCenter : Math.min(this.maxScrollMargin, verticalCenter);
 
         var needForwardScrollLeft = x >= elementDimensions.scroll.left + elementDimensions.width - leftScrollMargin;
         var needBackwardScrollLeft = x <= elementDimensions.scroll.left + leftScrollMargin;
@@ -125,7 +125,7 @@ export default class ScrollAutomation {
 
         if (canShowFullElementWidth) {
             var availableLeftScrollMargin = Math.floor((parentDimensions.width - childDimensions.width) / 2);
-            var leftScrollMargin          = this.forceCenter ? availableLeftScrollMargin : Math.min(this.maxScrollMargin, availableLeftScrollMargin);
+            var leftScrollMargin          = this.scrollToCenter ? availableLeftScrollMargin : Math.min(this.maxScrollMargin, availableLeftScrollMargin);
 
             if (relativePosition.left < leftScrollMargin) {
                 fullViewScrollLeft = Math.round(parentDimensions.scroll.left + relativePosition.left -
@@ -140,7 +140,7 @@ export default class ScrollAutomation {
 
         if (canShowFullElementHeight) {
             var availableTopScrollMargin = Math.floor((parentDimensions.height - childDimensions.height) / 2);
-            var topScrollMargin          = this.forceCenter ? availableTopScrollMargin : Math.min(this.maxScrollMargin, availableTopScrollMargin);
+            var topScrollMargin          = this.scrollToCenter ? availableTopScrollMargin : Math.min(this.maxScrollMargin, availableTopScrollMargin);
 
             if (relativePosition.top < topScrollMargin)
                 fullViewScrollTop = Math.round(parentDimensions.scroll.top + relativePosition.top - topScrollMargin);

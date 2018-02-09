@@ -707,8 +707,6 @@ interface KeyModifiers {
 }
 
 interface CropOptions {
-    width?: number;
-    height?: number;
     left?: number;
     right?: number;
     top?: number;
@@ -726,7 +724,7 @@ interface ActionOptions {
 
 interface TakeElementScreenshotOptions extends ActionOptions {
     crop?: CropOptions;
-    withMargins?: boolean;
+    includeMargins?: boolean;
     scrollTargetX?: number;
     scrollTargetY?: number;
 }
@@ -982,8 +980,8 @@ interface TestController {
     /**
      * Takes a screenshot of the tested page.
      *
-     * @param path - relative path to the screenshot file where screenshot should be saved. Resolved from the screenshot
-     * directory specified by using the `runner.screenshots` API method or the `screenshots-path` command line option.
+     * @param path - relative path to the screenshot file. Resolved from the screenshot directory specified by
+     * using the `runner.screenshots` API method or the `screenshots-path` command line option.
      * If path doesn't have .png extension, it will be added automatically.
      */
     takeScreenshot(path?: string): TestControllerPromise;
@@ -991,8 +989,8 @@ interface TestController {
      * Takes a screenshot of the specified element.
      *
      * @param selector - Identifies the element for screenshot capturing.
-     * @param path - relative path to the screenshot file where screenshot should be saved. Resolved from the screenshot
-     * directory specified by using the `runner.screenshots` API method or the `screenshots-path` command line option.
+     * @param path - relative path to the screenshot file. Resolved from the screenshot  directory specified by
+     * using the `runner.screenshots` API method or the `screenshots-path` command line option.
      * If path doesn't have .png extension, it will be added automatically.
      */
     takeElementScreenshot(selector: string | Selector | NodeSnapshot | SelectorPromise | ((...args: any[]) => Node | Node[] | NodeList | HTMLCollection),
