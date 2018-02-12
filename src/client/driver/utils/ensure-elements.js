@@ -1,6 +1,23 @@
+import { Promise } from '../deps/hammerhead';
+
+import { domUtils, NODE_TYPE_DESCRIPTIONS } from '../deps/testcafe-core';
+
+import SelectorExecutor from '../command-executors/client-functions/selector-executor';
+
+import {
+    ActionElementNotFoundError,
+    ActionElementIsInvisibleError,
+    ActionSelectorMatchesWrongNodeTypeError,
+    ActionAdditionalElementNotFoundError,
+    ActionAdditionalElementIsInvisibleError,
+    ActionAdditionalSelectorMatchesWrongNodeTypeError
+} from '../../../errors/test-run';
+
+
 class ElementsRetriever {
-    constructor (elementDescriptors) {
+    constructor (elementDescriptors, globalSelectorTimeout) {
         this.elements                = [];
+        this.globalSelectorTimeout   = globalSelectorTimeout;
         this.ensureElementsPromise   = Promise.resolve();
         this.ensureElementsStartTime = new Date();
 
@@ -29,8 +46,8 @@ class ElementsRetriever {
     }
 }
 
-export function ensureElements (elementDescriptors) {
-    var elementsRetriever = new ElementsRetriever(elementDescriptors);
+export function ensureElements (elementDescriptors, globalSelectorTimeout) {
+    var elementsRetriever = new ElementsRetriever(elementDescriptors, globalSelectorTimeout);
 
     return elementsRetriever.getElements();
 }
@@ -50,5 +67,5 @@ export function createAdditionalElementDescriptor (selector, elementName) {
         createNotFoundError:         () => new ActionAdditionalElementNotFoundError(elementName),
         createIsInvisibleError:      () => new ActionAdditionalElementIsInvisibleError(elementName),
         createHasWrongNodeTypeError: nodeDescription => new ActionAdditionalSelectorMatchesWrongNodeTypeError(elementName, nodeDescription)
-    }
+    };
 }

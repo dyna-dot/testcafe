@@ -1,9 +1,11 @@
 import { transport, Promise } from '../deps/hammerhead';
 import { scrollController, delay } from '../deps/testcafe-core';
 import { Scroll as ScrollAutomation } from '../deps/testcafe-automation';
-import AutomationExecutor from './automation-executor';
-import ensureCropOptions from './ensure-crop-options';
 import { hide as hideUI, show as showUI, showScreenshotMark, hideScreenshotMark } from '../deps/testcafe-ui';
+import DriverStatus from '../status';
+import ensureCropOptions from './ensure-crop-options';
+import { ensureElements, createElementDescriptor } from '../utils/ensure-elements';
+import runWithBarriers from '../utils/run-with-barriers';
 import MESSAGE from '../../../test-run/client-messages';
 import COMMAND_TYPE from '../../../test-run/commands/type';
 import { ScrollOptions } from '../../../test-run/commands/options';
@@ -11,7 +13,14 @@ import { ScrollOptions } from '../../../test-run/commands/options';
 
 const POSSIBLE_RESIZE_ERROR_DELAY = 100;
 
-class ManipulationExecutor extends AutomationExecutor {
+class ManipulationExecutor {
+    constructor (command, globalSelectorTimeout) {
+        this.globalSelectorTimeout = globalSelectorTimeout;
+
+        this.command  = command;
+        this.elements = null;
+    }
+
     _createManipulationReadyMessage () {
         var dpr = window.devicePixelRatio || 1;
 
@@ -51,8 +60,27 @@ class ManipulationExecutor extends AutomationExecutor {
         return message;
     }
 
+    _runScrollBeforeScreenshot () {
+        return ensureElements([createElementDescriptor(this.command.selector)], this.globalSelectorTimeout)
+            .then(elements => {
+                this.elements = elements;
+
+                ensureCropOptions(this.elements[0], this.command.options);
+
+                var { scrollTargetX, scrollTargetY, scrollToCenter } = this.command.options;
+
+                var scrollAutomation = new ScrollAutomation(this.elements[0], new ScrollOptions({
+                    offsetX: scrollTargetX,
+                    offsetY: scrollTargetY,
+                    scrollToCenter
+                }));
+
+                return scrollAutomation.run();
+            });
+    }
+
     _runManipulation () {
-        var result  = null;
+        var manipulationResult = null;
 
         hideUI();
 
@@ -67,21 +95,16 @@ class ManipulationExecutor extends AutomationExecutor {
 
                 scrollController.stopPropagation();
 
-                var { offsetX, offsetY, scrollToCenter } = this.command.options;
-                var scrollAutomation     = new ScrollAutomation(this.elements[0], new ScrollOptions({ offsetX, offsetY, scrollToCenter }));
-
-                return scrollAutomation.run();
+                return this._runScrollBeforeScreenshot();
             })
             .then(() => transport.queuedAsyncServiceMsg(this._createManipulationReadyMessage()))
-            .catch(err => {
+            .then(({ result, error }) => {
+                if (error)
+                    throw error;
+
                 scrollController.enablePropagation();
 
-                return Promise.reject(err);
-            })
-            .then(res => {
-                scrollController.enablePropagation();
-
-                result = res;
+                manipulationResult = result;
 
                 if (this.command.markData)
                     hideScreenshotMark();
@@ -90,30 +113,23 @@ class ManipulationExecutor extends AutomationExecutor {
 
                 return delay(POSSIBLE_RESIZE_ERROR_DELAY);
             })
-            .then(() => result);
+            .then(() => new DriverStatus({ isCommandResult: true, result: manipulationResult }))
+            .catch(err => {
+                scrollController.enablePropagation();
+
+                return new DriverStatus({ isCommandResult: true, executionError: err });
+            });
     }
 
-    // Overridden API
-    ensureCommandOptions () {
-        if (this.command.type === COMMAND_TYPE.takeElementScreenshot)
-            ensureCropOptions(this.elements[0], this.command.options);
-    }
+    execute () {
+        var { barriersPromise } = runWithBarriers(() => this._runManipulation());
 
-    createAutomation () {
-        return { run: () => this._runManipulation() };
-    }
-
-    shouldReturnResult () {
-        return true;
-    }
-
-    shouldRerunOnError () {
-        return false;
+        return barriersPromise;
     }
 }
 
 export default function (command, globalSelectorTimeout, statusBar, testSpeed) {
     var manipulationExecutor = new ManipulationExecutor(command, globalSelectorTimeout, statusBar, testSpeed);
 
-    return manipulationExecutor.execute().completionPromise;
+    return manipulationExecutor.execute();
 }

@@ -2,6 +2,7 @@ import fs from 'fs';
 import Promise from 'pinkie';
 import { PNG } from 'pngjs';
 import promisifyEvent from 'promisify-event';
+import { InvalidElementScreenshotDimensionsError } from '../errors/test-run/';
 
 
 function readPng (filePath) {
@@ -61,8 +62,12 @@ export default async function (screenshotPath, markSeed, clientAreaDimensions, c
     var width  = right - left;
     var height = bottom - top;
 
-    if (width <= 0 || height <= 0)
-        return false;
+    console.log(width, height);//eslint-disable-line no-console
+
+    if (width <= 0 || height <= 0) {
+        console.log('throw');//eslint-disable-line no-console
+        throw new InvalidElementScreenshotDimensionsError();
+    }
 
     var dstImage = new PNG({ width, height });
     var stride   = dstImage.width * 4;

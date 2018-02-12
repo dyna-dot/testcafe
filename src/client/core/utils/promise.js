@@ -5,10 +5,10 @@ var Promise = hammerhead.Promise;
 
 
 export function whilst (condition, iterator) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
         function iterate () {
             if (condition())
-                return iterator().then(iterate);
+                return iterator().then(iterate).catch(err => reject(err));
 
             return resolve();
         }

@@ -3,6 +3,7 @@ import { isServiceCommand } from './commands/utils';
 import COMMAND_TYPE from './commands/type';
 import WARNING_MESSAGE from '../notifications/warning-message';
 import { WindowDimensionsOverflowError } from '../errors/test-run/';
+import ERROR_TYPE from '../errors/test-run/type';
 
 
 export default class BrowserManipulationQueue {
@@ -58,6 +59,13 @@ export default class BrowserManipulationQueue {
             return await capture();
         }
         catch (err) {
+            console.log(err.type); //eslint-disable-line no-console
+
+            if (err.type === ERROR_TYPE.invalidElementScreenshotDimensionsError) {
+                console.log('rethrow');
+                throw err;
+            }
+
             this.warningLog.addWarning(WARNING_MESSAGE.screenshotError, err.stack);
             return null;
         }

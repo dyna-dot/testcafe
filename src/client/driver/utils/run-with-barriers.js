@@ -1,3 +1,10 @@
+import { Promise } from '../deps/hammerhead';
+
+import { RequestBarrier, pageUnloadBarrier } from '../deps/testcafe-core';
+
+import ScriptExecutionBarrier from '../script-execution-barrier';
+
+
 export default function (action, ...args) {
     var requestBarrier         = new RequestBarrier();
     var scriptExecutionBarrier = new ScriptExecutionBarrier();

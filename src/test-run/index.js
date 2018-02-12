@@ -582,7 +582,17 @@ ServiceMessages[CLIENT_MESSAGES.ready] = function (msg) {
 ServiceMessages[CLIENT_MESSAGES.readyForBrowserManipulation] = async function (msg) {
     this.debugLog.driverMessage(msg);
 
-    return await this.browserManipulationQueue.executePendingManipulation(msg);
+    var result = null;
+    var error  = null;
+
+    try {
+        result = await this.browserManipulationQueue.executePendingManipulation(msg);
+    }
+    catch (err) {
+        error = err;
+    }
+
+    return { result, error };
 };
 
 ServiceMessages[CLIENT_MESSAGES.waitForFileDownload] = function (msg) {

@@ -33,6 +33,22 @@ test('Incorrect action path argument', async t => {
     await t.takeElementScreenshot('table', 1);
 });
 
+test.only('Invalid dimensions', async t => {
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 50, right: -50 } });
+});
+
+test('Invisible element', async t => {
+    await t
+        .click('#hide')
+        .takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png');
+});
+
+test('Non-existent element', async t => {
+    await t
+        .click('#remove')
+        .takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png');
+});
+
 test('Element', async t => {
     await enableScrollWatcher();
 
@@ -46,21 +62,29 @@ test('Element with margins', async t => {
 });
 
 test('Default crop', async t => {
-    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { width: 50, height: 50 } });
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { right: 50, bottom: 50 } });
 });
 
 test('Top-left', async t => {
-    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 0, top: 0, width: 50, height: 50 } });
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 0, top: 0, right: 50, bottom: 50 } });
 });
 
 test('Top-right', async t => {
-    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: -50, top: 0, height: 50 } });
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: -50, top: 0, bottom: 50 } });
 });
 
 test('Bottom-left', async t => {
-    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 0, top: -50, right: -50, height: 50 } });
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 0, top: -50, right: -50 } });
 });
 
 test('Bottom-right', async t => {
     await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png', { crop: { left: 50, top: -50 } });
+});
+
+test('Same-domain iframe', async t => {
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png');
+});
+
+test('Cross-domain iframe', async t => {
+    await t.takeElementScreenshot('table', 'custom/' + t.ctx.parsedUA.family + '.png');
 });

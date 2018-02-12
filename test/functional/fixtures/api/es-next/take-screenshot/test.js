@@ -101,7 +101,7 @@ describe('[API] t.takeScreenshot()', function () {
     }
 });
 
-describe('[API] t.takeElementScreenshot()', function () {
+describe.only('[API] t.takeElementScreenshot()', function () {
     if (config.useLocalBrowsers) {
         afterEach(assertionHelper.removeScreenshotDir);
 
@@ -222,6 +222,52 @@ describe('[API] t.takeElementScreenshot()', function () {
 
         it('Should perform bottom-right crop', function () {
             return runTests('./testcafe-fixtures/take-element-screenshot.js', 'Bottom-right',
+                { setScreenshotPath: true })
+                .then(function () {
+                    return assertionHelper.isScreenshotsEqual('custom', path.join(__dirname, './data/bottom-right.png'));
+                })
+                .then(function (result) {
+                    expect(result).eql(true);
+                });
+        });
+
+        it.only('Should throw an error if element dimensions are invalid', function () {
+            return runTests('./testcafe-fixtures/take-element-screenshot.js', 'Invalid dimensions',
+                { setScreenshotPath: true })
+                .then(function () {
+                    return assertionHelper.isScreenshotsEqual('custom', path.join(__dirname, './data/bottom-right.png'));
+                });
+        });
+
+        it('Should throw an error if the element is invisible', function () {
+            return runTests('./testcafe-fixtures/take-element-screenshot.js', 'Invisible element',
+                { setScreenshotPath: true })
+                .then(function () {
+                    return assertionHelper.isScreenshotsEqual('custom', path.join(__dirname, './data/bottom-right.png'));
+                });
+        });
+
+        it('Should throw an error if the element doesn\'t exist', function () {
+            return runTests('./testcafe-fixtures/take-element-screenshot.js', 'Non-existent element',
+                { setScreenshotPath: true })
+                .then(function () {
+                    return assertionHelper.isScreenshotsEqual('custom', path.join(__dirname, './data/bottom-right.png'));
+                });
+        });
+
+        it.skip('Should capture screenshot of the element inside a same-domain iframe', function () {
+            return runTests('./testcafe-fixtures/take-element-screenshot.js', 'Same-domain iframe',
+                { setScreenshotPath: true })
+                .then(function () {
+                    return assertionHelper.isScreenshotsEqual('custom', path.join(__dirname, './data/bottom-right.png'));
+                })
+                .then(function (result) {
+                    expect(result).eql(true);
+                });
+        });
+
+        it.skip('Should capture screenshot of the element inside a same-domain iframe', function () {
+            return runTests('./testcafe-fixtures/take-element-screenshot.js', 'Cross-domain iframe',
                 { setScreenshotPath: true })
                 .then(function () {
                     return assertionHelper.isScreenshotsEqual('custom', path.join(__dirname, './data/bottom-right.png'));

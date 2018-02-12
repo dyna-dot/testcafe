@@ -52,6 +52,8 @@
         </style>
     </head>
     <body>
+        <button id="hide">Hide target</button>
+        <button id="remove">Remove target</button>
         <div class="vfiller"></div>
         <div class="container">
             <div class="hfiller"></div>
@@ -70,5 +72,16 @@
             <div class="hfiller"></div>
         </div>
         <div class="vfiller"></div>
+        <script>
+            var table = document.querySelector('table');
+
+            document.querySelector('#hide').addEventListener('click', function () {
+                table.style.visibility = 'hidden';
+            });
+
+            document.querySelector('#remove').addEventListener('click', function () {
+                table.parentNode.removeChild(table);
+            });
+        </script>
     </body>
 </html>
