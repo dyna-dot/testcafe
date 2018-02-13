@@ -67,14 +67,14 @@ export function isServiceCommand (command) {
 
 export function isExecutableInTopWindowOnly (command) {
     return command.type === TYPE.testDone ||
-           command.type === TYPE.prepareBrowserManipulation ||
            command.type === TYPE.switchToMainWindow ||
            command.type === TYPE.setNativeDialogHandler ||
            command.type === TYPE.getNativeDialogHistory ||
            command.type === TYPE.setTestSpeed ||
            command.type === TYPE.showAssertionRetriesStatus ||
            command.type === TYPE.hideAssertionRetriesStatus ||
-           command.type === TYPE.setBreakpoint;
+           command.type === TYPE.setBreakpoint ||
+           isBrowserManipulationCommand(command) && command.type !== TYPE.takeElementScreenshot;
 }
 
 export function isJSExpression (val) {
