@@ -13,6 +13,24 @@ import { ScrollOptions } from '../../../test-run/commands/options';
 
 const POSSIBLE_RESIZE_ERROR_DELAY = 100;
 
+// Setup cross-iframe interaction
+messageSandbox.on(messageSandbox.SERVICE_MSG_RECEIVED_EVENT, e => {
+    if (e.message.cmd === SCROLL_REQUEST_CMD) {
+        var element         = domUtils.findIframeByWindow(e.source);
+        var offsetX         = e.message.offsetX;
+        var offsetY         = e.message.offsetY;
+        var maxScrollMargin = e.message.maxScrollMargin;
+
+        var scroll = new ScrollAutomation(element, { offsetX, offsetY });
+
+        scroll.maxScrollMargin = maxScrollMargin;
+
+        scroll
+            .run()
+            .then(() => messageSandbox.sendServiceMsg({ cmd: SCROLL_RESPONSE_CMD }, e.source));
+    }
+});
+
 class ManipulationExecutor {
     constructor (command, globalSelectorTimeout) {
         this.globalSelectorTimeout = globalSelectorTimeout;
