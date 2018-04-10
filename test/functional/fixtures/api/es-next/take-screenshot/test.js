@@ -8,7 +8,7 @@ var SCREENSHOT_PATH_MESSAGE_RE     = /^___test-screenshots___\\\d{4,4}-\d{2,2}-\
 var CUSTOM_SCREENSHOT_PATH_MESSAGE = '___test-screenshots___';
 
 
-describe('[API] t.takeScreenshot()', function () {
+describe.only('[API] t.takeScreenshot()', function () {
     if (config.useLocalBrowsers) {
         afterEach(assertionHelper.removeScreenshotDir);
 
