@@ -36,9 +36,10 @@ function getCachedAndCleanModules (modulePath) {
 
     delete require.cache[modulePath];
 
-    require(modulePath);
+    const cleanModuleExports = require(modulePath);
+    const cleanModule        = require.cache[modulePath] || { exports: cleanModuleExports };
 
-    return { cachedModule, cleanModule: require.cache[modulePath] };
+    return { cachedModule, cleanModule };
 }
 
 function getMomentModules ({ mainMomentModulePath, sideMomentModulePath }) {
