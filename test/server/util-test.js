@@ -1,4 +1,5 @@
 const path            = require('path');
+const Module          = require('module');
 const fs              = require('fs');
 const del             = require('del');
 const expect          = require('chai').expect;
@@ -118,6 +119,57 @@ describe('Utils', () => {
 
                     expect(subDirs.length).eql(0);
                 });
+        });
+    });
+
+    describe('Moment Module Loader', () => {
+        const moduleCacheDesciptor    = Object.getOwnPropertyDescriptor(Module, '_cache');
+        const originalLoad            = Module._load;
+
+        beforeEach(() => {
+            for (const cachedModule of Object.keys(require.cache))
+                delete require.cache[cachedModule];
+        });
+
+        afterEach(() => {
+            Module._load = originalLoad;
+
+            Object.defineProperty(Module, '_cache', moduleCacheDesciptor);
+        });
+
+        it('Should work when multiple moment modules are installed (GH-1750)', () => {
+            const momentModulePath = require.resolve('moment');
+
+            for (const cachedModule of Object.keys(require.cache))
+                delete require.cache[cachedModule];
+
+            Module._load = function (...args) {
+                const modulePath = Module._resolveFilename(...args);
+
+                // NOTE: Remove cached moment module to simulate multiple installations of moment
+                if (modulePath === modulePath)
+                    delete Module._cache[momentModulePath];
+
+                return originalLoad.apply(this, args);
+            };
+
+            const moment = require('../../lib/utils/moment-loader');
+
+            expect(moment.duration.format).to.be.ok;
+        });
+
+        it('Should work when modules cache is disabled (GH-2500)', () => {
+            Object.defineProperty(Module, '_cache', {
+                enumerable:   true,
+                configurable: true,
+
+                get: () => Object.create(null),
+                set: v => v
+            });
+
+            const moment = require('../../lib/utils/moment-loader');
+
+            expect(moment.duration.format).to.be.ok;
         });
     });
 });
