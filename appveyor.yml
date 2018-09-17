@@ -10,6 +10,9 @@ environment:
   matrix:
     - GULP_TASK: "test-functional-local-ie"
 
+init:
+ - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
 for:
 -
   branches:
