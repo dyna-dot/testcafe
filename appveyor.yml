@@ -1,0 +1,36 @@
+version: "#{build}"
+clone_depth: 1
+
+skip_commits:
+  message: /^\[docs\]/
+
+environment:
+  NODEJS_VERSION: "stable"
+
+  matrix:
+    - GULP_TASK: "test-functional-local-ie"
+
+for:
+-
+  branches:
+    only:
+      - master
+
+  notifications:
+  - provider: Email
+    to:
+    - boris.kirov@devexpress.com
+    - andrey.belym@devexpress.com
+    - elena.dikareva@devexpress.com
+    on_build_success: false
+    on_build_status_changed: false
+
+  environment:
+    matrix:
+    - GULP_TASK: "test-functional-local-chrome-firefox"
+    - GULP_TASK: "test-functional-local-legacy"
+
+build: off
+
+test_script:
+- cmd: echo OK
