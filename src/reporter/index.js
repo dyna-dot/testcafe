@@ -1,7 +1,6 @@
 import Promise from 'pinkie';
-import { find, sortBy, noop } from 'lodash';
+import { find, sortBy } from 'lodash';
 import { writable as isWritableStream } from 'is-stream';
-import promisifyEvent from 'promisify-event';
 import ReporterPluginHost from './plugin-host';
 
 export default class Reporter {
@@ -147,9 +146,9 @@ export default class Reporter {
 
         this.outStream.end();
 
-        await Promise.race([
-            promisifyEvent(this.outStream, 'finish'),
-            promisifyEvent(this.outStream, 'error').catch(noop)
-        ]);
+        await new Promise(resolve => {
+            this.outStream.once('finish', resolve);
+            this.outStream.once('error', resolve);
+        });
     }
 }
