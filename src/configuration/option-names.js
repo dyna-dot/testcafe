@@ -13,5 +13,8 @@ export default {
     proxyBypass:                 'proxyBypass',
     appCommand:                  'appCommand',
     appInitDelay:                'appInitDelay',
-    disableTestSyntaxValidation: 'disableTestSyntaxValidation'
+    disableTestSyntaxValidation: 'disableTestSyntaxValidation',
+    videoPath:                   'videoPath',
+    videoOptions:                'videoOptions',
+    videoEncodingOptions:        'videoEncodingOptions'
 };

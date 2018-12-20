@@ -697,6 +697,8 @@ const ServiceMessages = TestRun.prototype;
 ServiceMessages[CLIENT_MESSAGES.ready] = function (msg) {
     this.debugLog.driverMessage(msg);
 
+    this.emit('ready');
+
     this._clearPendingRequest();
 
     // NOTE: the driver sends the status for the second time if it didn't get a response at the

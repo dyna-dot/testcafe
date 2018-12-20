@@ -1,9 +1,8 @@
-import Promise from 'pinkie';
 import { fsObjectExists, readFile } from '../utils/promisified-functions';
 import Option from './option';
 import optionSource from './option-source';
 import { cloneDeep, castArray } from 'lodash';
-import { ensureOptionValue as ensureSslOptionValue } from '../utils/parse-ssl-options';
+import { getSSLOptions } from '../utils/get-options';
 import OPTION_NAMES from './option-names';
 import getFilterFn from '../utils/get-filter-fn';
 import resolvePathRelativelyCwd from '../utils/resolve-path-relatively-cwd';
@@ -105,9 +104,7 @@ export default class Configuration {
         if (!sslOptions)
             return;
 
-        await Promise.all(Object.entries(sslOptions.value).map(async ([key, value]) => {
-            sslOptions.value[key] = await ensureSslOptionValue(key, value);
-        }));
+        sslOptions.value = await getSSLOptions(sslOptions.value);
     }
 
     _ensureOption (name, value, source) {

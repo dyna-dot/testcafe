@@ -2,8 +2,10 @@ const path        = require('path');
 const expect      = require('chai').expect;
 const moment      = require('moment');
 const userAgent   = require('useragent');
-const PathPattern = require('../../lib/screenshots/path-pattern');
+const PathPattern = require('../../lib/utils/path-pattern');
 
+
+const SCREENSHOT_EXTENSION = 'png';
 
 describe('Screenshot path pattern', () => {
     const parsedUserAgentMock = {
@@ -17,20 +19,20 @@ describe('Screenshot path pattern', () => {
         data.parsedUserAgent   = data.parsedUserAgent || parsedUserAgentMock;
         data.quarantineAttempt = data.quarantineAttempt || null;
 
-        return new PathPattern(pattern, data);
+        return new PathPattern(pattern, SCREENSHOT_EXTENSION, data);
     };
 
     describe('Default pattern', () => {
         it('Normal run', () => {
             const pathPattern = createPathPattern();
 
-            expect(pathPattern.pattern).eql('${DATE}_${TIME}\\test-${TEST_INDEX}\\${USERAGENT}\\${FILE_INDEX}.png');
+            expect(pathPattern.pattern).eql('${DATE}_${TIME}\\test-${TEST_INDEX}\\${USERAGENT}\\${FILE_INDEX}');
         });
 
         it('Quarantine mode', () => {
             const pathPattern = createPathPattern(void 0, { quarantineAttempt: 1 });
 
-            expect(pathPattern.pattern).eql('${DATE}_${TIME}\\test-${TEST_INDEX}\\run-${QUARANTINE_ATTEMPT}\\${USERAGENT}\\${FILE_INDEX}.png');
+            expect(pathPattern.pattern).eql('${DATE}_${TIME}\\test-${TEST_INDEX}\\run-${QUARANTINE_ATTEMPT}\\${USERAGENT}\\${FILE_INDEX}');
         });
     });
 

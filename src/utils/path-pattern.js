@@ -5,8 +5,6 @@ import escapeUserAgent from '../utils/escape-user-agent';
 const DATE_FORMAT = 'YYYY-MM-DD';
 const TIME_FORMAT = 'HH-mm-ss';
 
-const SCRENSHOT_EXTENTION = 'png';
-
 const ERRORS_FOLDER = 'errors';
 
 const PLACEHOLDERS = {
@@ -25,14 +23,15 @@ const PLACEHOLDERS = {
 };
 
 const DEFAULT_PATH_PATTERN_FOR_REPORT      = `${PLACEHOLDERS.DATE}_${PLACEHOLDERS.TIME}\\test-${PLACEHOLDERS.TEST_INDEX}`;
-const DEFAULT_PATH_PATTERN                 = `${DEFAULT_PATH_PATTERN_FOR_REPORT}\\${PLACEHOLDERS.USERAGENT}\\${PLACEHOLDERS.FILE_INDEX}.${SCRENSHOT_EXTENTION}`;
-const QUARANTINE_MODE_DEFAULT_PATH_PATTERN = `${DEFAULT_PATH_PATTERN_FOR_REPORT}\\run-${PLACEHOLDERS.QUARANTINE_ATTEMPT}\\${PLACEHOLDERS.USERAGENT}\\${PLACEHOLDERS.FILE_INDEX}.${SCRENSHOT_EXTENTION}`;
+const DEFAULT_PATH_PATTERN                 = `${DEFAULT_PATH_PATTERN_FOR_REPORT}\\${PLACEHOLDERS.USERAGENT}\\${PLACEHOLDERS.FILE_INDEX}`;
+const QUARANTINE_MODE_DEFAULT_PATH_PATTERN = `${DEFAULT_PATH_PATTERN_FOR_REPORT}\\run-${PLACEHOLDERS.QUARANTINE_ATTEMPT}\\${PLACEHOLDERS.USERAGENT}\\${PLACEHOLDERS.FILE_INDEX}`;
 
 export default class PathPattern {
-    constructor (pattern, data) {
+    constructor (pattern, fileExtension, data) {
         this.pattern              = this._ensurePattern(pattern, data.quarantineAttempt);
         this.data                 = this._addDefaultFields(data);
         this.placeholderToDataMap = this._createPlaceholderToDataMap();
+        this.fileExtension        = fileExtension;
     }
 
     _ensurePattern (pattern, quarantineAttempt) {
@@ -103,7 +102,7 @@ export default class PathPattern {
     getPath (forError) {
         const path = PathPattern._buildPath(this.pattern, this.placeholderToDataMap, forError);
 
-        return correctFilePath(path, SCRENSHOT_EXTENTION);
+        return correctFilePath(path, this.fileExtension);
     }
 
     // For testing purposes
