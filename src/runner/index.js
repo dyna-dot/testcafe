@@ -238,14 +238,21 @@ export default class Runner extends EventEmitter {
 
     async _validateVideoOptions () {
         const videoPath            = this.configuration.getOption(OPTION_NAMES.videoPath);
-        const videoOptions         = this.configuration.getOption(OPTION_NAMES.videoOptions);
         const videoEncodingOptions = this.configuration.getOption(OPTION_NAMES.videoEncodingOptions);
+
+        let videoOptions = this.configuration.getOption(OPTION_NAMES.videoOptions);
 
         if (!videoPath) {
             if (videoOptions || videoEncodingOptions)
                 throw new GeneralError(MESSAGE.cantSetVideoOptionsWithoutBaseVideoPathSpecified);
 
             return;
+        }
+
+        if (!videoOptions) {
+            videoOptions = {};
+
+            this.configuration.mergeOptions({ videoOptions });
         }
 
         if (videoOptions.ffmpegPath)
@@ -367,8 +374,8 @@ export default class Runner extends EventEmitter {
     video (path, options, encodingOptions) {
         this.configuration.mergeOptions({
             [OPTION_NAMES.videoPath]:            path,
-            [OPTION_NAMES.videoOptions]:         options || {},
-            [OPTION_NAMES.videoEncodingOptions]: encodingOptions || {}
+            [OPTION_NAMES.videoOptions]:         options,
+            [OPTION_NAMES.videoEncodingOptions]: encodingOptions
         });
 
         return this;

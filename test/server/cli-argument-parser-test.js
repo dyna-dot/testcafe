@@ -486,7 +486,8 @@ describe('CLI argument parser', function () {
             { long: '--stop-on-first-fail', short: '--sf' },
             { long: '--disable-test-syntax-validation' },
             { long: '--video' },
-            { long: '--video-options' }
+            { long: '--video-options' },
+            { long: '--video-encoding-options' }
         ];
 
         const parser  = new CliArgumentParser('');
