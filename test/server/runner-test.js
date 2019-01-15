@@ -274,6 +274,36 @@ describe('Runner', () => {
         });
     });
 
+    describe('.video()', () => {
+        it('Should throw an error if video options are specified without a base video path', () => {
+            return runner
+                .browsers(connection)
+                .video(void 0, { failedOnly: true })
+                .src('test/server/data/test-suites/basic/testfile2.js')
+                .run()
+                .then(() => {
+                    throw new Error('Promise rejection expected');
+                })
+                .catch(err => {
+                    expect(err.message).eql('Cannot set the video and video encoding options without a base video path specified.');
+                });
+        });
+
+        it('Should throw an error if video encoding options are specified without a base video path', () => {
+            return runner
+                .browsers(connection)
+                .video(void 0, null, { 'c:v': 'x264' })
+                .src('test/server/data/test-suites/basic/testfile2.js')
+                .run()
+                .then(() => {
+                    throw new Error('Promise rejection expected');
+                })
+                .catch(err => {
+                    expect(err.message).eql('Cannot set the video and video encoding options without a base video path specified.');
+                });
+        });
+    });
+
     describe('.src()', () => {
         it('Should accept source files in different forms', () => {
             const cwd                           = process.cwd();
