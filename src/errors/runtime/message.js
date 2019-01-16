@@ -43,6 +43,6 @@ export default {
     cantUseScreenshotPathPatternWithoutBaseScreenshotPathSpecified: 'Cannot use the screenshot path pattern without a base screenshot path specified',
     cantSetVideoOptionsWithoutBaseVideoPathSpecified:               'Cannot set the video and video encoding options without a base video path specified.',
     cantFindFFMPEG:                                                 'Cannot find the FFMPEG executable required for video recording. Please add the FFMPEG installation directory to the PATH environment variable, provide a path to the executable through the FFMPEG_PATH environment variable, the --video-options ffmpegPath=<path> option or install the @ffmpeg-installer/ffmpeg package from NPM.',
-    multipleAPIMethodCallForbidden:                                 'It\'s forbidden to call the "{methodName}" method several times. Pass an array of parameters to this method instead.',
-    invalidReporterOutput:                                          "The specified reporter's output should be a filename or a stream (writable, transform, or duplex)."
+    multipleAPIMethodCallForbidden:                                 'You cannot call the "{methodName}" method more than once. Pass an array of parameters to this method instead.',
+    invalidReporterOutput:                                          "Specify a file name or a writable stream as the reporter's output target."
 };
